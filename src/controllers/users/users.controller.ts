@@ -39,12 +39,14 @@ export class UsersController {
 
   public create = async (req: Request, res: Response) => {
     try {
-      const { name, nickname, email, password } = req.body as CreateUserRequest
+      const { name, nickname, email, password, role } =
+        req.body as CreateUserRequest
       const user = this.repository.create({
         name: name,
         nickname: nickname,
         email: email,
-        password: password
+        password: password,
+        role: role
       })
       const data = await this.repository.save(user)
       res.send(new ApiResponseDto(true, 'User created successfully!', data))
@@ -62,8 +64,9 @@ export class UsersController {
   public update = async (req: Request, res: Response) => {
     try {
       const userId = req.params.id
-      const { name, nickname, email, password } = req.body as CreateUserRequest
-      const updatedData = { name, nickname, email, password }
+      const { name, nickname, email, password, role } =
+        req.body as CreateUserRequest
+      const updatedData = { name, nickname, email, password, role }
       const queryResult = await this.repository
         .createQueryBuilder('user')
         .update(User)

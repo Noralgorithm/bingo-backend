@@ -1,8 +1,8 @@
 import { Router } from 'express'
-import userRoutes from './users.routes'
+import adminRouter from './admin/admin.router'
 
 const api = Router()
 
-api.use('/users', userRoutes)
+api.use('/admin', adminRouter)
 
 export default api
