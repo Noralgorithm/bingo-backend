@@ -10,12 +10,13 @@ export class UsersController {
 
   public findAll = async (_req: Request, res: Response) => {
     try {
-      const users = await this.repository.find()
+      const users = await this.repository.find({ order: { id: 'ASC' } })
       res.send(new ApiResponseDto(true, 'Users fetched successfully!', users))
     } catch (e) {
       res.send(new ApiResponseDto(false, 'Error while fetching users!', e))
     }
   }
+
   public findOne = async (req: Request, res: Response) => {
     try {
       const userId = req.params.id
@@ -63,15 +64,15 @@ export class UsersController {
       const userId = req.params.id
       const { name, nickname, email, password } = req.body as CreateUserRequest
       const updatedData = { name, nickname, email, password }
-      const updatedUser = await this.repository
+      const queryResult = await this.repository
         .createQueryBuilder('user')
         .update(User)
         .set(updatedData)
         .where('id = :id', { id: userId })
         .execute()
-      if (updatedUser.affected === 0) throw new Error('User not found!')
+      if (queryResult.affected === 0) throw new Error('User not found!')
       res.send(
-        new ApiResponseDto(true, 'User updated successfully!', updatedUser)
+        new ApiResponseDto(true, 'User updated successfully!', queryResult)
       )
     } catch (e) {
       res.send(
@@ -84,7 +85,27 @@ export class UsersController {
     }
   }
 
-  public delete = (_req: Request, res: Response) => {
-    res.send('delete')
+  public delete = async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.id
+      const queryResult = await this.repository
+        .createQueryBuilder('user')
+        .delete()
+        .from(User)
+        .where('id = :id', { id: userId })
+        .execute()
+      if (queryResult.affected === 0) throw new Error('User not found!')
+      res.send(
+        new ApiResponseDto(true, 'User deleted successfully!', queryResult)
+      )
+    } catch (e) {
+      res.send(
+        new ApiResponseDto(
+          false,
+          'Error while deleting user!',
+          getErrorMessage(e)
+        )
+      )
+    }
   }
 }
