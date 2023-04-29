@@ -1,9 +1,10 @@
 import { Request, Response } from 'express'
-import { User } from '../../models/user.entity'
-import AppDataSource from '../../database/connection'
-import { ApiResponseDto } from '../../utils/api_response_dto.util'
+import { User } from '../../../models/user.entity'
+import AppDataSource from '../../../database/connection'
+import { ApiResponseDto } from '../../../utils/api_response_dto.util'
 import { CreateUserRequest } from './users.types'
-import { getErrorMessage } from '../../utils/get_error_message.util'
+import { getErrorMessage } from '../../../utils/get_error_message.util'
+import { hashPassword } from '../../../utils/bcrypt.util'
 
 export class UsersController {
   private repository = AppDataSource.getRepository(User)
@@ -41,12 +42,15 @@ export class UsersController {
     try {
       const { name, nickname, email, password, role } =
         req.body as CreateUserRequest
+
+      const hashedPassword = await hashPassword(password)
+
       const user = this.repository.create({
-        name: name,
-        nickname: nickname,
-        email: email,
-        password: password,
-        role: role
+        name,
+        nickname,
+        email,
+        password: hashedPassword,
+        role
       })
       const data = await this.repository.save(user)
       res.send(new ApiResponseDto(true, 'User created successfully!', data))

@@ -1,8 +1,11 @@
 import { Router } from 'express'
-import { UsersController } from '../../controllers/users/users.controller'
+import { UsersController } from '../../controllers/admin/users/users.controller'
+import authenticateToken from '../../middlewares/jwt.middleware'
 
 const router = Router()
 const usersController = new UsersController()
+
+router.use(authenticateToken)
 
 router.get('/', (req, res) => usersController.findAll(req, res))
 
