@@ -14,7 +14,7 @@ export class UsersController {
       const users = await this.repository.find({ order: { id: 'ASC' } })
       res.send(new ApiResponseDto(true, 'Users fetched successfully!', users))
     } catch (e) {
-      res.send(new ApiResponseDto(false, 'Error while fetching users!', e))
+      res.send(new ApiResponseDto(false, 'Error while fetching users!', getErrorMessage(e)))
     }
   }
 

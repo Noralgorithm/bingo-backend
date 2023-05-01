@@ -21,15 +21,14 @@ export class AuthController {
         .status(400)
         .send(new ApiResponseDto(false, 'Bad request', null))
 
-    // const user = await this.repository.findOneByOrFail({ email }
     const user = await this.repository.findOneBy({ email })
 
     if (!user)
-      return res.send(new ApiResponseDto(false, 'User not found', null))
+      return res.status(404).send(new ApiResponseDto(false, 'Usuario no encontrado', null))
 
     if (user.role !== 'admin' && user.role !== 'super')
       return res
-        .status(401)
+        .status(403)
         .send(new ApiResponseDto(false, 'Unauthorized', null))
 
     const isPasswordValid = await comparePassword(password, user.password)
@@ -37,7 +36,7 @@ export class AuthController {
     if (!isPasswordValid)
       return res
         .status(401)
-        .send(new ApiResponseDto(false, 'Invalid password', null))
+        .send(new ApiResponseDto(false, 'Contraseña invalida', null))
 
     res.send(
       new ApiResponseDto(true, 'Login success!', {
