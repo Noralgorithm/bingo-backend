@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import { User } from '../../../models/user.entity'
 import AppDataSource from '../../../database/connection'
 import { ApiResponseDto } from '../../../utils/api_response_dto.util'
-import { CreateUserRequest } from './users.types'
+import { CreateUserRequest } from '../../shared/users.types'
 import { getErrorMessage } from '../../../utils/get_error_message.util'
 import { hashPassword } from '../../../utils/bcrypt.util'
 
@@ -14,7 +14,13 @@ export class UsersController {
       const users = await this.repository.find({ order: { id: 'ASC' } })
       res.send(new ApiResponseDto(true, 'Users fetched successfully!', users))
     } catch (e) {
-      res.send(new ApiResponseDto(false, 'Error while fetching users!', getErrorMessage(e)))
+      res.send(
+        new ApiResponseDto(
+          false,
+          'Error while fetching users!',
+          getErrorMessage(e)
+        )
+      )
     }
   }
 
@@ -42,6 +48,11 @@ export class UsersController {
     try {
       const { name, nickname, email, password, role } =
         req.body as CreateUserRequest
+
+      if (!name || !nickname || !email || !password)
+        return res
+          .status(400)
+          .send(new ApiResponseDto(false, 'Bad request', null))
 
       const hashedPassword = await hashPassword(password)
 

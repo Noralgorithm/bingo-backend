@@ -15,7 +15,7 @@ export class AuthController {
 
   public login = async (req: Request, res: Response) => {
     const { email, password } = req.body as LoginRequest
-    
+
     if (!email || !password)
       return res
         .status(400)
@@ -24,7 +24,9 @@ export class AuthController {
     const user = await this.repository.findOneBy({ email })
 
     if (!user)
-      return res.status(404).send(new ApiResponseDto(false, 'Usuario no encontrado', null))
+      return res
+        .status(404)
+        .send(new ApiResponseDto(false, 'Usuario no encontrado', null))
 
     if (user.role !== 'admin' && user.role !== 'super')
       return res
@@ -40,7 +42,7 @@ export class AuthController {
 
     res.send(
       new ApiResponseDto(true, 'Login success!', {
-        token: generateToken(String(user.id))
+        token: generateToken({ userId: String(user.id), role: user.role })
       })
     )
   }

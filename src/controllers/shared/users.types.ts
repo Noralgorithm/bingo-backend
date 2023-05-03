@@ -3,5 +3,5 @@ export interface CreateUserRequest {
   nickname: string
   email: string
   password: string
-  role: 'client' | 'admin'
+  role: 'client' | 'admin' | 'super'
 }
