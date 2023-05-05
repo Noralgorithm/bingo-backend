@@ -5,14 +5,39 @@ import { ApiResponseDto } from '../../../utils/api_response_dto.util'
 import { CreateUserRequest } from '../../shared/users.types'
 import { getErrorMessage } from '../../../utils/get_error_message.util'
 import { hashPassword } from '../../../utils/bcrypt.util'
-
+import { Pagination } from '../../shared/types'
 export class UsersController {
   private repository = AppDataSource.getRepository(User)
 
-  public findAll = async (_req: Request, res: Response) => {
+  public findAll = async (req: Request, res: Response) => {
     try {
-      const users = await this.repository.find({ order: { id: 'ASC' } })
-      res.send(new ApiResponseDto(true, 'Users fetched successfully!', users))
+      const currentPage = parseInt(req.query.page as string) || 1
+      const pageSize = parseInt(req.query.pageSize as string) || 10
+      const [users, total] = await this.repository.findAndCount({
+        order: { id: 'ASC' },
+        skip: (currentPage - 1) * pageSize,
+        take: pageSize
+      })
+
+      const pageCount = Math.ceil(total / pageSize)
+      const hasPreviousPage = currentPage > 1
+      const hasNextPage = currentPage < pageCount
+
+      const pagination: Pagination = {
+        total,
+        pageSize,
+        pageCount,
+        currentPage,
+        hasPreviousPage,
+        hasNextPage
+      }
+
+      res.send(
+        new ApiResponseDto(true, 'Users fetched successfully!', {
+          users,
+          pagination
+        })
+      )
     } catch (e) {
       res.send(
         new ApiResponseDto(
