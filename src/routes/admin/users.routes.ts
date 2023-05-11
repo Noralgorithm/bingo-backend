@@ -11,8 +11,6 @@ router.use(isAdmin)
 
 router.get('/', (req, res) => usersController.findAll(req, res))
 
-router.get('/:id', (req, res) => usersController.findOne(req, res))
-
 router.post('/', (req, res) => usersController.create(req, res))
 
 router.put('/:id', (req, res) => usersController.update(req, res))

@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm'
 import { User } from '../models/user.entity'
+import { Room } from '../models/room.entity'
 
 const AppDataSource = new DataSource({
   type: 'postgres',
@@ -8,11 +9,8 @@ const AppDataSource = new DataSource({
   username: 'postgres',
   password: '852456753jose',
   database: 'test',
-  entities: [
-    User
-    // Aquí debes añadir las entidades que utilizarás en tu aplicación
-  ],
-  synchronize: true // esto creará automáticamente las tablas en la base de datos
+  entities: [User, Room],
+  synchronize: true
 })
 
 AppDataSource.initialize()

@@ -6,6 +6,7 @@ import { CreateUserRequest } from '../../shared/users.types'
 import { getErrorMessage } from '../../../utils/get_error_message.util'
 import { hashPassword } from '../../../utils/bcrypt.util'
 import { Pagination } from '../../shared/types'
+import { Brackets } from 'typeorm'
 export class UsersController {
   private repository = AppDataSource.getRepository(User)
 
@@ -13,25 +14,43 @@ export class UsersController {
     try {
       const currentPage = parseInt(req.query.page as string) || 1
       const pageSize = parseInt(req.query.pageSize as string) || 10
-      const [users, total] = await this.repository.findAndCount({
-        order: { id: 'ASC' },
-        skip: (currentPage - 1) * pageSize,
-        take: pageSize
-      })
-
+      const userType = req.query.userType as string | undefined
+      const search = req.query.search as string | undefined
+  
+      const queryBuilder = this.repository.createQueryBuilder('user')
+  
+      if (userType) {
+        queryBuilder.where('user.type = :userType', { userType })
+      }
+  
+      if (search) {
+        queryBuilder.andWhere(
+          new Brackets(qb => {
+            qb.where('user.nickname ILIKE :search', { search: `%${search}%` })
+            qb.orWhere('user.email ILIKE :search', { search: `%${search}%` })
+          })
+        )
+      }
+  
+      const [users, total] = await queryBuilder
+        .orderBy('user.id', 'ASC')
+        .skip((currentPage - 1) * pageSize)
+        .take(pageSize)
+        .getManyAndCount()
+  
       const pageCount = Math.ceil(total / pageSize)
       const hasPreviousPage = currentPage > 1
       const hasNextPage = currentPage < pageCount
-
+  
       const pagination: Pagination = {
-        total,
+        total: users.length,
         pageSize,
         pageCount,
         currentPage,
         hasPreviousPage,
-        hasNextPage
+        hasNextPage,
       }
-
+  
       res.send(
         new ApiResponseDto(true, 'Users fetched successfully!', {
           users,
@@ -43,26 +62,6 @@ export class UsersController {
         new ApiResponseDto(
           false,
           'Error while fetching users!',
-          getErrorMessage(e)
-        )
-      )
-    }
-  }
-
-  public findOne = async (req: Request, res: Response) => {
-    try {
-      const userId = req.params.id
-      const user = await this.repository
-        .createQueryBuilder('user')
-        .where('user.id = :id', { id: userId })
-        .getOne()
-      if (!user) throw new Error('User not found!')
-      res.send(new ApiResponseDto(true, 'User fetched successfully!', user))
-    } catch (e) {
-      res.send(
-        new ApiResponseDto(
-          false,
-          'Error while fetching user!',
           getErrorMessage(e)
         )
       )
