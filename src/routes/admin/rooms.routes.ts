@@ -1,10 +1,9 @@
 import { Router } from 'express'
 import authenticateToken from '../../middlewares/jwt.middleware'
 import isAdmin from '../../middlewares/is_admin.middleware'
-import { RoomsController } from '../../controllers/admin/rooms/rooms.controller'
+import { roomsController } from '../../database/connection'
 
 const router = Router()
-const roomsController = new RoomsController()
 
 router.use(authenticateToken)
 router.use(isAdmin)

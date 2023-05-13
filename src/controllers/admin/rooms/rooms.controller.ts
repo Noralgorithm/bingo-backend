@@ -1,13 +1,47 @@
 import { Request, Response } from 'express'
 import { ApiResponseDto } from '../../../utils/api_response_dto.util'
 import { getErrorMessage } from '../../../utils/get_error_message.util'
-import AppDataSource from '../../../database/connection'
 import { Room } from '../../../models/room.entity'
 import { Brackets } from 'typeorm'
 import { Pagination } from '../../shared/types'
+import { CronJob } from 'cron'
+import { Repository } from 'typeorm'
+import AppDataSource from '../../../database/connection'
 
 export class RoomsController {
-  private repository = AppDataSource.getRepository(Room)
+  private cronJobs: Array<{ id: number; cronJob: CronJob }>
+  private repository: Repository<Room>
+
+  public init = async () => {
+    try {
+      this.repository = AppDataSource.getRepository(Room)
+
+      const rooms = await this.repository
+        .createQueryBuilder('rooms')
+        .select('rooms')
+        .getMany()
+      this.cronJobs = rooms.map(room => {
+        const cronJob = new CronJob(
+          room.frequency,
+          () => {
+            console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
+          },
+          () => {
+            console.log(
+              `Detenida la ejecución de la sala ${room.name} de id: ${room.id}`
+            )
+          }
+        )
+        return {
+          id: room.id,
+          cronJob
+        }
+      })
+      this.cronJobs.forEach(cronJob => cronJob.cronJob.start())
+    } catch (e) {
+      console.log('Error initializing CronJobs...')
+    }
+  }
 
   public findAll = async (req: Request, res: Response) => {
     try {
@@ -100,6 +134,21 @@ export class RoomsController {
       })
 
       const data = await this.repository.save(room)
+
+      const newCronJob = {
+        id: data.id,
+        cronJob: new CronJob(
+          data.frequency,
+          () => {
+            console.log(`Ejecutada sala ${data.name} con el id: ${data.id}`)
+          },
+          null,
+          true
+        )
+      }
+
+      this.cronJobs.push(newCronJob)
+
       res.send(new ApiResponseDto(true, 'Room created successfully!', data))
     } catch (e) {
       res.send(
@@ -145,6 +194,24 @@ export class RoomsController {
         .execute()
 
       if (queryResult.affected === 0) throw new Error('Room not found!')
+
+      this.cronJobs.filter(cronJob => cronJob.id === Number(roomId))[0].cronJob.stop()
+      this.cronJobs = this.cronJobs.filter(cronJob => cronJob.id !== Number(roomId))
+
+      const newCronJob = {
+        id: Number(roomId),
+        cronJob: new CronJob(
+          frequency,
+          () => {
+            console.log(`Ejecutada sala ${name} con el id: ${roomId}`)
+          },
+          null,
+          true
+        )
+      }
+
+      this.cronJobs.push(newCronJob)
+
       res.send(
         new ApiResponseDto(true, 'Room updated successfully!', queryResult)
       )
@@ -170,7 +237,12 @@ export class RoomsController {
         .where('id = :id', { id: roomId })
         .execute()
 
-      if (queryResult.affected === 0) throw new Error('Room not found!')
+      if (queryResult.affected === 0) throw new Error('Room not found!') 
+
+      this.cronJobs.filter(cronJob => cronJob.id === Number(roomId))[0].cronJob.stop()
+      this.cronJobs = this.cronJobs.filter(cronJob => cronJob.id !== Number(roomId))
+
+      console.log(this.cronJobs)
       res.send(
         new ApiResponseDto(true, 'Room deleted successfully!', queryResult)
       )
