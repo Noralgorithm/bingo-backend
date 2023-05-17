@@ -16,13 +16,13 @@ export class UsersController {
       const pageSize = parseInt(req.query.pageSize as string) || 10
       const userType = req.query.userType as string | undefined
       const search = req.query.search as string | undefined
-  
+
       const queryBuilder = this.repository.createQueryBuilder('user')
-  
+
       if (userType) {
         queryBuilder.where('user.type = :userType', { userType })
       }
-  
+
       if (search) {
         queryBuilder.andWhere(
           new Brackets(qb => {
@@ -31,26 +31,26 @@ export class UsersController {
           })
         )
       }
-  
+
       const [users, total] = await queryBuilder
         .orderBy('user.id', 'ASC')
         .skip((currentPage - 1) * pageSize)
         .take(pageSize)
         .getManyAndCount()
-  
+
       const pageCount = Math.ceil(total / pageSize)
       const hasPreviousPage = currentPage > 1
       const hasNextPage = currentPage < pageCount
-  
+
       const pagination: Pagination = {
         total: users.length,
         pageSize,
         pageCount,
         currentPage,
         hasPreviousPage,
-        hasNextPage,
+        hasNextPage
       }
-  
+
       res.send(
         new ApiResponseDto(true, 'Users fetched successfully!', {
           users,

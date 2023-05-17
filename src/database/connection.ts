@@ -25,5 +25,4 @@ AppDataSource.initialize()
     console.log('Error al establecer la conexión:', error)
   })
 
-
 export default AppDataSource

@@ -7,6 +7,7 @@ import { Pagination } from '../../shared/types'
 import { CronJob } from 'cron'
 import { Repository } from 'typeorm'
 import AppDataSource from '../../../database/connection'
+import isCronExpressionValid from '../../../utils/cron_expressions_checker.util'
 
 export class RoomsController {
   private cronJobs: Array<{ id: number; cronJob: CronJob }>
@@ -21,17 +22,9 @@ export class RoomsController {
         .select('rooms')
         .getMany()
       this.cronJobs = rooms.map(room => {
-        const cronJob = new CronJob(
-          room.frequency,
-          () => {
-            console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
-          },
-          () => {
-            console.log(
-              `Detenida la ejecución de la sala ${room.name} de id: ${room.id}`
-            )
-          }
-        )
+        const cronJob = new CronJob(room.frequency, () => {
+          console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
+        })
         return {
           id: room.id,
           cronJob
@@ -114,9 +107,8 @@ export class RoomsController {
         !lines_amount ||
         !bingo_prize ||
         !line_prize ||
-        !is_premium ||
         !card_price ||
-        !frequency
+        !isCronExpressionValid(frequency)
       )
         return res
           .status(400)
@@ -175,6 +167,19 @@ export class RoomsController {
         frequency
       } = req.body as Room
 
+      if (
+        !name ||
+        !bingos_amount ||
+        !lines_amount ||
+        !bingo_prize ||
+        !line_prize ||
+        !card_price ||
+        !isCronExpressionValid(frequency)
+      )
+        return res
+          .status(400)
+          .send(new ApiResponseDto(false, 'Bad request', null))
+
       const updatedData = {
         name,
         bingos_amount,
@@ -195,8 +200,12 @@ export class RoomsController {
 
       if (queryResult.affected === 0) throw new Error('Room not found!')
 
-      this.cronJobs.filter(cronJob => cronJob.id === Number(roomId))[0].cronJob.stop()
-      this.cronJobs = this.cronJobs.filter(cronJob => cronJob.id !== Number(roomId))
+      this.cronJobs
+        .filter(cronJob => cronJob.id === Number(roomId))[0]
+        .cronJob.stop()
+      this.cronJobs = this.cronJobs.filter(
+        cronJob => cronJob.id !== Number(roomId)
+      )
 
       const newCronJob = {
         id: Number(roomId),
@@ -237,12 +246,15 @@ export class RoomsController {
         .where('id = :id', { id: roomId })
         .execute()
 
-      if (queryResult.affected === 0) throw new Error('Room not found!') 
+      if (queryResult.affected === 0) throw new Error('Room not found!')
 
-      this.cronJobs.filter(cronJob => cronJob.id === Number(roomId))[0].cronJob.stop()
-      this.cronJobs = this.cronJobs.filter(cronJob => cronJob.id !== Number(roomId))
+      this.cronJobs
+        .filter(cronJob => cronJob.id === Number(roomId))[0]
+        .cronJob.stop()
+      this.cronJobs = this.cronJobs.filter(
+        cronJob => cronJob.id !== Number(roomId)
+      )
 
-      console.log(this.cronJobs)
       res.send(
         new ApiResponseDto(true, 'Room deleted successfully!', queryResult)
       )
