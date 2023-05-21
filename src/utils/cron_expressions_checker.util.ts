@@ -1,12 +1,11 @@
-import CronParser from 'cron-parser'
+import { isValidCron } from 'cron-validator'
 
 function isCronExpressionValid(cronExpression: string) {
-  try {
-    CronParser.parseExpression(cronExpression)
-    return true
-  } catch (error) {
-    return false
-  }
+  return isValidCron(cronExpression, {
+    seconds: true,
+    alias: true,
+    allowSevenAsSunday: true
+  })
 }
 
 export default isCronExpressionValid
