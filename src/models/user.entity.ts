@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm'
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm'
+import { Participation } from './participation.entity'
 
 export type UserRoleType = 'client' | 'admin' | 'super'
 
@@ -25,4 +26,7 @@ export class User {
     default: 'client'
   })
   role: UserRoleType
+
+  @OneToMany(() => Participation, participation => participation.user)
+  participations: Participation[]
 }

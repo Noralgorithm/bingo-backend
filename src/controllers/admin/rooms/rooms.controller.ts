@@ -8,28 +8,28 @@ import { CronJob } from 'cron'
 import { Repository } from 'typeorm'
 import AppDataSource from '../../../database/connection'
 import isCronExpressionValid from '../../../utils/cron_expressions_checker.util'
+import { BingoController } from '../../shared/bingo/bingo.controller'
 
 export class RoomsController {
   private cronJobs: Array<{ id: number; cronJob: CronJob }>
   private repository: Repository<Room>
+  private bingoController: BingoController
 
   public init = async () => {
     try {
       this.repository = AppDataSource.getRepository(Room)
+      this.bingoController = new BingoController(5, 5)
 
       const rooms = await this.repository
         .createQueryBuilder('rooms')
         .select('rooms')
         .getMany()
-      this.cronJobs = rooms.map(room => {
-        const cronJob = new CronJob(room.frequency, () => {
-          console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
+
+      this.cronJobs = await Promise.all(
+        rooms.map(async room => {
+          return await this.executeRoom(room)
         })
-        return {
-          id: room.id,
-          cronJob
-        }
-      })
+      )
       this.cronJobs.forEach(cronJob => cronJob.cronJob.start())
     } catch (e) {
       console.log('Error initializing CronJobs...')
@@ -53,6 +53,7 @@ export class RoomsController {
       }
 
       const [rooms, total] = await queryBuilder
+      .select()
         .orderBy('rooms.id', 'ASC')
         .skip((currentPage - 1) * pageSize)
         .take(pageSize)
@@ -126,13 +127,14 @@ export class RoomsController {
       })
 
       const data = await this.repository.save(room)
+      await this.generateBallsIsNonExist(data.id)
 
       const newCronJob = {
         id: data.id,
         cronJob: new CronJob(
           data.frequency,
-          () => {
-            console.log(`Ejecutada sala ${data.name} con el id: ${data.id}`)
+          async () => {
+            await this.executeRoom(data)
           },
           null,
           true
@@ -189,7 +191,7 @@ export class RoomsController {
         is_premium,
         card_price,
         frequency
-      }
+      } as Room
 
       const queryResult = await this.repository
         .createQueryBuilder('room')
@@ -211,8 +213,8 @@ export class RoomsController {
         id: Number(roomId),
         cronJob: new CronJob(
           frequency,
-          () => {
-            console.log(`Ejecutada sala ${name} con el id: ${roomId}`)
+          async () => {
+            this.executeRoom(updatedData)
           },
           null,
           true
@@ -266,6 +268,59 @@ export class RoomsController {
           getErrorMessage(e)
         )
       )
+    }
+  }
+
+  private generateBallsIsNonExist = async (roomId: number) => {
+    try {
+      const room = await this.repository.findOneBy({ id: roomId })
+      if (!room) return console.log('Error generando bolas (1)')
+
+      const next_game_balls = this.bingoController.generateBalls()
+
+      const queryResult = await this.repository
+        .createQueryBuilder('room')
+        .update(Room)
+        .set({ next_game_balls })
+        .where('id = :id', { id: roomId })
+        .execute()
+
+      if (queryResult.affected === 0) throw new Error('Room not found!')
+    } catch (e) {
+      console.log('Error generando bolas')
+    }
+  }
+
+  private generateBalls = async (roomId: number) => {
+    try {
+      const room = await this.repository.findOneBy({ id: roomId })
+      if (!room) return console.log('Error generando bolas (1)')
+
+      const next_game_balls = this.bingoController.generateBalls()
+
+      const queryResult = await this.repository
+        .createQueryBuilder('room')
+        .update(Room)
+        .set({ next_game_balls })
+        .where('id = :id', { id: roomId })
+        .execute()
+
+      if (queryResult.affected === 0) throw new Error('Room not found!')
+    } catch (e) {
+      console.log('Error generando bolas')
+    }
+  }
+
+  private executeRoom = async (room: Room) => {
+    this.generateBallsIsNonExist(room.id)
+    const cronJob = new CronJob(room.frequency, () => {
+      //repartir recompensas
+      this.generateBalls(room.id)
+      console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
+    })
+    return {
+      id: room.id,
+      cronJob
     }
   }
 }

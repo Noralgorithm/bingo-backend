@@ -2,6 +2,8 @@ import { DataSource } from 'typeorm'
 import { User } from '../models/user.entity'
 import { Room } from '../models/room.entity'
 import { RoomsController } from '../controllers/admin/rooms/rooms.controller'
+import { Participation } from '../models/participation.entity'
+import { Card } from '../models/card.entity'
 
 export const roomsController = new RoomsController()
 
@@ -12,7 +14,7 @@ const AppDataSource = new DataSource({
   username: 'postgres',
   password: '852456753jose',
   database: 'test',
-  entities: [User, Room],
+  entities: [User, Room, Participation, Card],
   synchronize: true
 })
 

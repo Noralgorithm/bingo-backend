@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm'
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany
+} from 'typeorm'
+import { Participation } from './participation.entity'
 
 @Entity({ name: 'rooms' })
 export class Room {
@@ -28,4 +34,10 @@ export class Room {
 
   @Column({ type: 'text' })
   frequency: string
+
+  @Column({ type: 'smallint', array: true, nullable: true })
+  next_game_balls: number[]
+
+  @OneToMany(() => Participation, participation => participation.room)
+  participations: Participation[]
 }
