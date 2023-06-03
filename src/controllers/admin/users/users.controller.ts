@@ -33,6 +33,7 @@ export class UsersController {
       }
 
       const [users, total] = await queryBuilder
+        .select()
         .orderBy('user.id', 'ASC')
         .skip((currentPage - 1) * pageSize)
         .take(pageSize)

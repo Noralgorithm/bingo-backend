@@ -1,5 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm'
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  AfterLoad
+} from 'typeorm'
 import { Participation } from './participation.entity'
+import { Transaction } from './transaction.entity'
+import AppDataSource from '../database/connection'
 
 export type UserRoleType = 'client' | 'admin' | 'super'
 
@@ -29,4 +37,21 @@ export class User {
 
   @OneToMany(() => Participation, participation => participation.user)
   participations: Participation[]
+
+  @OneToMany(() => Transaction, transaction => transaction.user, { eager: true })
+  transactions: Transaction[]
+
+  @Column({ default: 0 })
+  credits: number
+
+  @AfterLoad()
+  async computeTotalTransactions() {
+    const transactionsRepository = AppDataSource.getRepository(Transaction)
+    const sum = await transactionsRepository.createQueryBuilder('transaction')
+      .select('SUM(transaction.amount)', 'sum')
+      .where('transaction.user = :userId', { userId: this.id })
+      .getRawOne();
+
+    this.credits = Number(sum.sum) || 0;
+  }
 }

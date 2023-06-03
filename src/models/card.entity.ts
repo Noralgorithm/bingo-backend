@@ -8,11 +8,8 @@ export class Card {
 
   @Column({
     type: 'jsonb',
-    transformer: {
-      from: (value: string) => JSON.parse(value),
-      to: (value: number[]) => JSON.stringify(value)
-    }
-  })  
+  })
+  card: number[][]
 
   @ManyToOne(() => Participation, participation => participation.cards)
   participation: Participation

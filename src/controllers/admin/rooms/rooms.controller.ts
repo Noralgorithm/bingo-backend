@@ -9,28 +9,30 @@ import { Repository } from 'typeorm'
 import AppDataSource from '../../../database/connection'
 import isCronExpressionValid from '../../../utils/cron_expressions_checker.util'
 import { BingoController } from '../../shared/bingo/bingo.controller'
+import { Participation } from '../../../models/participation.entity'
 
 export class RoomsController {
   private cronJobs: Array<{ id: number; cronJob: CronJob }>
-  private repository: Repository<Room>
+  private roomsRepository: Repository<Room>
+  private participationRepository: Repository<Participation>
   private bingoController: BingoController
 
   public init = async () => {
     try {
-      this.repository = AppDataSource.getRepository(Room)
+      this.roomsRepository = AppDataSource.getRepository(Room)
+      this.participationRepository = AppDataSource.getRepository(Participation)
       this.bingoController = new BingoController(5, 5)
 
-      const rooms = await this.repository
+      const rooms = await this.roomsRepository
         .createQueryBuilder('rooms')
         .select('rooms')
         .getMany()
 
       this.cronJobs = await Promise.all(
         rooms.map(async room => {
-          return await this.executeRoom(room)
+          return await this.createCronJob(room)
         })
       )
-      this.cronJobs.forEach(cronJob => cronJob.cronJob.start())
     } catch (e) {
       console.log('Error initializing CronJobs...')
     }
@@ -42,7 +44,7 @@ export class RoomsController {
       const pageSize = parseInt(req.query.pageSize as string) || 10
       const search = req.query.search as string | undefined
 
-      const queryBuilder = this.repository.createQueryBuilder('rooms')
+      const queryBuilder = this.roomsRepository.createQueryBuilder('rooms')
 
       if (search) {
         queryBuilder.andWhere(
@@ -53,7 +55,7 @@ export class RoomsController {
       }
 
       const [rooms, total] = await queryBuilder
-      .select()
+        .select()
         .orderBy('rooms.id', 'ASC')
         .skip((currentPage - 1) * pageSize)
         .take(pageSize)
@@ -115,7 +117,7 @@ export class RoomsController {
           .status(400)
           .send(new ApiResponseDto(false, 'Bad request', null))
 
-      const room = this.repository.create({
+      const room = this.roomsRepository.create({
         name,
         bingos_amount,
         lines_amount,
@@ -126,21 +128,10 @@ export class RoomsController {
         frequency
       })
 
-      const data = await this.repository.save(room)
-      await this.generateBallsIsNonExist(data.id)
+      const data = await this.roomsRepository.save(room)
+      await this.generateBalls(data.id)
 
-      const newCronJob = {
-        id: data.id,
-        cronJob: new CronJob(
-          data.frequency,
-          async () => {
-            await this.executeRoom(data)
-          },
-          null,
-          true
-        )
-      }
-
+      const newCronJob = await this.createCronJob(data)
       this.cronJobs.push(newCronJob)
 
       res.send(new ApiResponseDto(true, 'Room created successfully!', data))
@@ -193,7 +184,7 @@ export class RoomsController {
         frequency
       } as Room
 
-      const queryResult = await this.repository
+      const queryResult = await this.roomsRepository
         .createQueryBuilder('room')
         .update(Room)
         .set(updatedData)
@@ -209,18 +200,9 @@ export class RoomsController {
         cronJob => cronJob.id !== Number(roomId)
       )
 
-      const newCronJob = {
-        id: Number(roomId),
-        cronJob: new CronJob(
-          frequency,
-          async () => {
-            this.executeRoom(updatedData)
-          },
-          null,
-          true
-        )
-      }
+      updatedData.id = Number(roomId)
 
+      const newCronJob = await this.createCronJob(updatedData)
       this.cronJobs.push(newCronJob)
 
       res.send(
@@ -241,7 +223,7 @@ export class RoomsController {
     try {
       const roomId = req.params.id
 
-      const queryResult = await this.repository
+      const queryResult = await this.roomsRepository
         .createQueryBuilder('room')
         .delete()
         .from(Room)
@@ -271,34 +253,14 @@ export class RoomsController {
     }
   }
 
-  private generateBallsIsNonExist = async (roomId: number) => {
-    try {
-      const room = await this.repository.findOneBy({ id: roomId })
-      if (!room) return console.log('Error generando bolas (1)')
-
-      const next_game_balls = this.bingoController.generateBalls()
-
-      const queryResult = await this.repository
-        .createQueryBuilder('room')
-        .update(Room)
-        .set({ next_game_balls })
-        .where('id = :id', { id: roomId })
-        .execute()
-
-      if (queryResult.affected === 0) throw new Error('Room not found!')
-    } catch (e) {
-      console.log('Error generando bolas')
-    }
-  }
-
   private generateBalls = async (roomId: number) => {
     try {
-      const room = await this.repository.findOneBy({ id: roomId })
-      if (!room) return console.log('Error generando bolas (1)')
+      const room = await this.roomsRepository.findOneBy({ id: roomId })
+      if (!room) throw new Error('Error generando bolas (1)')
 
       const next_game_balls = this.bingoController.generateBalls()
 
-      const queryResult = await this.repository
+      const queryResult = await this.roomsRepository
         .createQueryBuilder('room')
         .update(Room)
         .set({ next_game_balls })
@@ -307,20 +269,35 @@ export class RoomsController {
 
       if (queryResult.affected === 0) throw new Error('Room not found!')
     } catch (e) {
-      console.log('Error generando bolas')
+      console.log(e)
     }
   }
 
-  private executeRoom = async (room: Room) => {
-    this.generateBallsIsNonExist(room.id)
-    const cronJob = new CronJob(room.frequency, () => {
-      //repartir recompensas
-      this.generateBalls(room.id)
-      console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
-    })
+  private createCronJob = async (room: Room) => {
+    const cronJob = new CronJob(
+      room.frequency,
+      async () => await this.executeRoom(room),
+      null,
+      true
+    )
+
     return {
       id: room.id,
       cronJob
     }
+  }
+
+  private executeRoom = async (room: Room) => {
+    await this.participationRepository
+      .createQueryBuilder('participations')
+      .update(Participation)
+      .set({ played: true })
+      .where('roomId = :id', { id: room.id })
+      .execute()
+
+    //TODO: repartir recompensas
+
+    this.generateBalls(room.id)
+    console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
   }
 }
