@@ -116,7 +116,7 @@ export class RoomsController {
     }
   }
 
-  public sellCards = async (req: Request, res: Response) => {
+  public buyCards = async (req: Request, res: Response) => {
     try {
       const { userId } = req.body
       const { roomId } = req.params
@@ -129,7 +129,7 @@ export class RoomsController {
       }
 
       const totalPrice = room.card_price * quantity
-      
+
       const user = await this.usersRepository.findOneBy({
         id: userId
       })
@@ -149,7 +149,7 @@ export class RoomsController {
           user: { id: userId },
           room: { id: Number(roomId) }
         },
-        relations: ['cards']
+        relations: ['cards', 'room']
       })
 
       if (!participation) {
@@ -159,11 +159,34 @@ export class RoomsController {
         })
       }
 
+      const soldCards:
+        | { totalCards: number; lineCards: number; bingoCards: number }
+        | undefined = await this.roomsRepository
+        .createQueryBuilder()
+        .select('COUNT(DISTINCT card.id)', 'totalCards')
+        .addSelect(
+          'COUNT(DISTINCT CASE WHEN card.victoryType = :line THEN card.id END)',
+          'lineCards'
+        )
+        .addSelect(
+          'COUNT(DISTINCT CASE WHEN card.victoryType = :bingo THEN card.id END)',
+          'bingoCards'
+        )
+        .from(Room, 'room')
+        .leftJoin('room.participations', 'participation')
+        .leftJoin('participation.cards', 'card')
+        .where('room.id = :roomId', { roomId })
+        .setParameter('line', 'line')
+        .setParameter('bingo', 'bingo')
+        .getRawOne()
+
+      console.log(soldCards)
+
       await AppDataSource.transaction(async transactionManager => {
         const transaction = new Transaction()
         transaction.amount = totalPrice * -1
         transaction.user = user
-        
+
         await transactionManager.save(user)
         await transactionManager.save(transaction)
 
@@ -171,6 +194,12 @@ export class RoomsController {
           const card = new Card()
           card.participation = participation as Participation
           card.card = this.bingoController.generateCard()
+          if (participation?.room.next_game_balls)
+            this.bingoController.checkVictory(
+              card.card,
+              participation?.room.next_game_balls
+            )
+
           await transactionManager.save(card)
         }
       })

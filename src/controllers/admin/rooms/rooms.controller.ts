@@ -288,14 +288,13 @@ export class RoomsController {
   }
 
   private executeRoom = async (room: Room) => {
+
     await this.participationRepository
       .createQueryBuilder('participations')
       .update(Participation)
       .set({ played: true })
       .where('roomId = :id', { id: room.id })
       .execute()
-
-    //TODO: repartir recompensas
 
     this.generateBalls(room.id)
     console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)

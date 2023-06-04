@@ -4,12 +4,12 @@ export class BingoController {
   constructor(private rows: number, private columns: number) {}
 
   public generateBalls(): number[] {
-    const numbers: number[] = [];
+    const numbers: number[] = []
     for (let i = 1; i <= 75; i++) {
-      numbers.push(i);
+      numbers.push(i)
     }
-    const shuffledNumbers = this.shuffle(numbers);
-    return shuffledNumbers.slice(0, 75);
+    const shuffledNumbers = this.shuffle(numbers)
+    return shuffledNumbers.slice(0, 75)
   }
 
   public generateCard(): BingoCard {
@@ -33,11 +33,11 @@ export class BingoController {
     }
 
     for (let i = 0; i < this.rows; i++) {
-      const fila: number[] = []
+      const row: number[] = []
       for (let j = 0; j < this.columns; j++) {
-        fila.push(columnNumbers[j][i])
+        row.push(columnNumbers[j][i])
       }
-      card.push(fila)
+      card.push(row)
     }
 
     card[2][2] = -1
@@ -45,83 +45,99 @@ export class BingoController {
     return card
   }
 
-  public checkVictory(card: BingoCard, numbers: number[]): string[] {
-    const victories: string[] = []
+  public checkVictory(
+    card: BingoCard,
+    numbers: number[]
+  ): { type: string; lastIndex: number }[] {
+    const victories: { type: string; lastIndex: number }[] = []
+    const maxIndices: Record<string, number> = {}
 
     for (let i = 0; i < this.rows; i++) {
       const row = card[i].filter(num => num !== -1)
       if (row.every(num => numbers.includes(num))) {
-        victories.push('Row ' + (i + 1) + ' win!')
+        const index = row
+          .map(num => numbers.indexOf(num))
+          .reduce((a, b) => Math.max(a, b))
+        const type = 'Row ' + (i + 1)
+        victories.push({ type, lastIndex: index })
+        maxIndices[type] = Math.max(maxIndices[type] || 0, index)
       }
     }
 
     for (let j = 0; j < this.columns; j++) {
       const column = []
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < this.rows; i++) {
         if (card[i][j] !== -1) {
           column.push(card[i][j])
         }
       }
       if (column.every(num => numbers.includes(num))) {
-        victories.push('Column ' + (j + 1) + ' win!')
+        const index = column
+          .map(num => numbers.indexOf(num))
+          .reduce((a, b) => Math.max(a, b))
+        const type = 'Column ' + (j + 1)
+        victories.push({ type, lastIndex: index })
+        maxIndices[type] = Math.max(maxIndices[type] || 0, index)
       }
     }
 
-    if (this.rows === 5 && this.columns === 5) {
-      let diagonal1 = [
-        card[0][0],
-        card[1][1],
-        card[2][2],
-        card[3][3],
-        card[4][4]
-      ]
-      let diagonal2 = [
-        card[0][4],
-        card[1][3],
-        card[2][2],
-        card[3][1],
-        card[4][0]
-      ]
-      diagonal1 = diagonal1.filter(num => num !== -1)
-      diagonal2 = diagonal2.filter(num => num !== -1)
-      if (diagonal1.every(num => numbers.includes(num))) {
-        victories.push('Diagonal 1 win!')
-      }
-      if (diagonal2.every(num => numbers.includes(num))) {
-        victories.push('Diagonal 2 win!')
-      }
+    let diagonal1 = [card[0][0], card[1][1], card[2][2], card[3][3], card[4][4]]
+    let diagonal2 = [card[0][4], card[1][3], card[2][2], card[3][1], card[4][0]]
+    diagonal1 = diagonal1.filter(num => num !== -1)
+    diagonal2 = diagonal2.filter(num => num !== -1)
+    if (diagonal1.every(num => numbers.includes(num))) {
+      const index = diagonal1
+        .map(num => numbers.indexOf(num))
+        .reduce((a, b) => Math.max(a, b))
+      const type = 'Diagonal 1'
+      victories.push({ type, lastIndex: index })
+      maxIndices[type] = Math.max(maxIndices[type] || 0, index)
+    }
+    if (diagonal2.every(num => numbers.includes(num))) {
+      const index = diagonal2
+        .map(num => numbers.indexOf(num))
+        .reduce((a, b) => Math.max(a, b))
+      const type = 'Diagonal 2'
+      victories.push({ type, lastIndex: index })
+      maxIndices[type] = Math.max(maxIndices[type] || 0, index)
     }
 
     const flatCard = card.flat().filter(num => num !== -1)
     if (flatCard.every(num => numbers.includes(num))) {
-      victories.push('Bingo!')
+      const index = flatCard
+        .map(num => numbers.indexOf(num))
+        .reduce((a, b) => Math.max(a, b))
+      const type = 'Bingo'
+      victories.push({ type, lastIndex: index })
+      maxIndices[type] = Math.max(maxIndices[type] || 0, index)
     }
 
     if (victories.length === 0) {
-      victories.push('No win yet.')
+      victories.push({ type: 'No win yet', lastIndex: -1 })
     }
 
-    return victories
+    return victories.map(({ type }) => ({
+      type,
+      lastIndex: maxIndices[type]
+    }))
   }
 
   private shuffle(array: number[]): number[] {
-    let currentIndex = array.length;
-    let temporaryValue, randomIndex;
-  
+    let currentIndex = array.length
+    let temporaryValue, randomIndex
+
     // While there remain elements to shuffle...
     while (0 !== currentIndex) {
-  
       // Pick a remaining element...
-      randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex -= 1;
-  
+      randomIndex = Math.floor(Math.random() * currentIndex)
+      currentIndex -= 1
+
       // And swap it with the current element.
-      temporaryValue = array[currentIndex];
-      array[currentIndex] = array[randomIndex];
-      array[randomIndex] = temporaryValue;
+      temporaryValue = array[currentIndex]
+      array[currentIndex] = array[randomIndex]
+      array[randomIndex] = temporaryValue
     }
-  
-    return array;
+
+    return array
   }
-  
 }
