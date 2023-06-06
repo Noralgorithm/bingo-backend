@@ -4,7 +4,7 @@ import {
   PrimaryGeneratedColumn,
   OneToMany
 } from 'typeorm'
-import { Participation } from './participation.entity'
+import { Game } from './game.entity'
 
 @Entity({ name: 'rooms' })
 export class Room {
@@ -38,6 +38,6 @@ export class Room {
   @Column({ type: 'smallint', array: true, nullable: true })
   next_game_balls: number[]
 
-  @OneToMany(() => Participation, participation => participation.room)
-  participations: Participation[]
+  @OneToMany(() => Game, game => game.room)
+  games: Game[]
 }

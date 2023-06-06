@@ -1,7 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany, Column } from 'typeorm'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  OneToMany,
+  Column
+} from 'typeorm'
 import { User } from './user.entity'
-import { Room } from './room.entity'
 import { Card } from './card.entity'
+import { Game } from './game.entity'
 
 @Entity({ name: 'participations' })
 export class Participation {
@@ -11,8 +17,8 @@ export class Participation {
   @ManyToOne(() => User, user => user.participations)
   user: User
 
-  @ManyToOne(() => Room, room => room.participations)
-  room: Room
+  @ManyToOne(() => Game, game => game.participations)
+  game: Game
 
   @Column({ type: 'boolean', default: false })
   played: boolean

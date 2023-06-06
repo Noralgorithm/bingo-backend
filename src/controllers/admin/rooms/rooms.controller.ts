@@ -10,15 +10,18 @@ import AppDataSource from '../../../database/connection'
 import isCronExpressionValid from '../../../utils/cron_expressions_checker.util'
 import { BingoController } from '../../shared/bingo/bingo.controller'
 import { Participation } from '../../../models/participation.entity'
+import { Game } from '../../../models/game.entity'
 
 export class RoomsController {
   private cronJobs: Array<{ id: number; cronJob: CronJob }>
   private roomsRepository: Repository<Room>
   private participationRepository: Repository<Participation>
+  private gamesRepository: Repository<Game>
   private bingoController: BingoController
 
   public init = async () => {
     try {
+      this.gamesRepository = AppDataSource.getRepository(Game)
       this.roomsRepository = AppDataSource.getRepository(Room)
       this.participationRepository = AppDataSource.getRepository(Participation)
       this.bingoController = new BingoController(5, 5)
@@ -129,7 +132,7 @@ export class RoomsController {
       })
 
       const data = await this.roomsRepository.save(room)
-      await this.generateBalls(data.id)
+      await this.generateGame(data.id)
 
       const newCronJob = await this.createCronJob(data)
       this.cronJobs.push(newCronJob)
@@ -253,21 +256,30 @@ export class RoomsController {
     }
   }
 
-  private generateBalls = async (roomId: number) => {
+  private generateGame = async (roomId: number) => {
     try {
-      const room = await this.roomsRepository.findOneBy({ id: roomId })
-      if (!room) throw new Error('Error generando bolas (1)')
-
-      const next_game_balls = this.bingoController.generateBalls()
-
-      const queryResult = await this.roomsRepository
+      const room = await this.roomsRepository
         .createQueryBuilder('room')
-        .update(Room)
-        .set({ next_game_balls })
-        .where('id = :id', { id: roomId })
-        .execute()
+        .leftJoinAndSelect('room.games', 'game')
+        .where('room.id = :id', { id: roomId })
+        .getOne()
+      if (!room) throw new Error('Room not found!')
 
-      if (queryResult.affected === 0) throw new Error('Room not found!')
+      const nextGameBalls = this.bingoController.generateBalls()
+
+      if (room.games) {
+        const lastGame = room?.games[room.games?.length - 1]
+        if (lastGame) {
+          lastGame.played_date = new Date()
+          await this.gamesRepository.save(lastGame)
+        }
+      }
+
+      const game = new Game()
+      game.game_balls = nextGameBalls
+      game.room = room
+
+      await this.gamesRepository.save(game)
     } catch (e) {
       console.log(e)
     }
@@ -288,7 +300,6 @@ export class RoomsController {
   }
 
   private executeRoom = async (room: Room) => {
-
     await this.participationRepository
       .createQueryBuilder('participations')
       .update(Participation)
@@ -296,7 +307,7 @@ export class RoomsController {
       .where('roomId = :id', { id: room.id })
       .execute()
 
-    this.generateBalls(room.id)
+    this.generateGame(room.id)
     console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
   }
 }

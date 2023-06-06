@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { Brackets, Repository } from 'typeorm'
+import { Brackets, IsNull, Repository } from 'typeorm'
 import AppDataSource from '../../database/connection'
 import { Room } from '../../models/room.entity'
 import { Transaction } from '../../models/transaction.entity'
@@ -10,14 +10,17 @@ import { Participation } from '../../models/participation.entity'
 import { User } from '../../models/user.entity'
 import { Card } from '../../models/card.entity'
 import { BingoController } from '../shared/bingo/bingo.controller'
+import { Game } from '../../models/game.entity'
 
 export class RoomsController {
   private roomsRepository: Repository<Room>
   private participationsRepository: Repository<Participation>
   private usersRepository: Repository<User>
+  private gamesRepository: Repository<Game>
   private bingoController: BingoController
 
   constructor() {
+    this.gamesRepository = AppDataSource.getRepository(Game)
     this.roomsRepository = AppDataSource.getRepository(Room)
     this.participationsRepository = AppDataSource.getRepository(Participation)
     this.usersRepository = AppDataSource.getRepository(User)
@@ -92,27 +95,37 @@ export class RoomsController {
     try {
       const { userId } = req.body
       const { roomId } = req.params
-      const participations = await this.participationsRepository.find({
+
+      const game = await this.gamesRepository.findOne({
+        where: {
+          room: { id: Number(roomId) },
+          played_date: IsNull()
+        }
+      })
+
+      const participation = await this.participationsRepository.findOne({
         where: {
           user: { id: userId },
-          room: { id: Number(roomId) }
+          game: { id: game?.id }
         },
         relations: ['cards']
       })
-      const cards = participations.flatMap(participation => participation.cards)
-      res.send(
-        new ApiResponseDto(true, 'User cards fetched successfully!', {
-          cards
+
+      const cards = participation?.cards
+      res.send({
+        success: true,
+        message: 'User cards fetched successfully!',
+        data: { cards }
+      })
+    } catch (error) {
+      console.log(error)
+      res
+        .status(500)
+        .send({
+          success: false,
+          message: 'Error while fetching user cards!',
+          error
         })
-      )
-    } catch (e) {
-      res.send(
-        new ApiResponseDto(
-          false,
-          'Error while fetching user cards!',
-          getErrorMessage(e)
-        )
-      )
     }
   }
 
@@ -144,29 +157,36 @@ export class RoomsController {
         )
       }
 
+      const game = await this.gamesRepository.findOne({
+        where: {
+          room: { id: Number(roomId) },
+          played_date: IsNull()
+        }
+      })
+
+      
       let participation = await this.participationsRepository.findOne({
         where: {
           user: { id: userId },
-          room: { id: Number(roomId) }
-        },
-        relations: ['cards', 'room']
+          game: { id: game?.id }
+        }
       })
-
+      
       if (!participation) {
         participation = await this.participationsRepository.save({
           user: { id: userId },
-          room: { id: Number(roomId) }
+          game: { id: game?.id }
         })
       }
-
-      const soldCards:
-        | { totalCards: number; lineCards: number; bingoCards: number }
-        | undefined = await this.roomsRepository
-        .createQueryBuilder()
-        .select('COUNT(DISTINCT card.id)', 'totalCards')
-        .addSelect(
-          'COUNT(DISTINCT CASE WHEN card.victoryType = :line THEN card.id END)',
-          'lineCards'
+      
+      /* const soldCards:
+      | { totalCards: number; lineCards: number; bingoCards: number }
+      | undefined = await this.roomsRepository
+      .createQueryBuilder()
+      .select('COUNT(DISTINCT card.id)', 'totalCards')
+      .addSelect(
+        'COUNT(DISTINCT CASE WHEN card.victoryType = :line THEN card.id END)',
+        'lineCards'
         )
         .addSelect(
           'COUNT(DISTINCT CASE WHEN card.victoryType = :bingo THEN card.id END)',
@@ -179,8 +199,8 @@ export class RoomsController {
         .setParameter('line', 'line')
         .setParameter('bingo', 'bingo')
         .getRawOne()
-
-      console.log(soldCards)
+        
+      console.log(soldCards) */
 
       await AppDataSource.transaction(async transactionManager => {
         const transaction = new Transaction()
@@ -194,10 +214,10 @@ export class RoomsController {
           const card = new Card()
           card.participation = participation as Participation
           card.card = this.bingoController.generateCard()
-          if (participation?.room.next_game_balls)
+          if (game?.game_balls)
             this.bingoController.checkVictory(
               card.card,
-              participation?.room.next_game_balls
+              game?.game_balls
             )
 
           await transactionManager.save(card)
