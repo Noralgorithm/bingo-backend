@@ -35,9 +35,6 @@ export class Room {
   @Column({ type: 'text' })
   frequency: string
 
-  @Column({ type: 'smallint', array: true, nullable: true })
-  next_game_balls: number[]
-
   @OneToMany(() => Game, game => game.room)
   games: Game[]
 }

@@ -17,9 +17,10 @@ export class RoomsController {
   private participationsRepository: Repository<Participation>
   private usersRepository: Repository<User>
   private gamesRepository: Repository<Game>
+  private cardsRepository: Repository<Card>
   private bingoController: BingoController
-
   constructor() {
+    this.cardsRepository = AppDataSource.getRepository(Card)
     this.gamesRepository = AppDataSource.getRepository(Game)
     this.roomsRepository = AppDataSource.getRepository(Room)
     this.participationsRepository = AppDataSource.getRepository(Participation)
@@ -119,42 +120,28 @@ export class RoomsController {
       })
     } catch (error) {
       console.log(error)
-      res
-        .status(500)
-        .send({
-          success: false,
-          message: 'Error while fetching user cards!',
-          error
-        })
+      res.status(500).send({
+        success: false,
+        message: 'Error while fetching user cards!',
+        error
+      })
     }
   }
 
-  public buyCards = async (req: Request, res: Response) => {
+  public generateCards = async (req: Request, res: Response) => {
     try {
-      const { userId } = req.body
       const { roomId } = req.params
       const { quantity } = req.body
+
+      if (!quantity)
+        return res
+          .status(400)
+          .send(new ApiResponseDto(false, 'Bad request.', null))
 
       const room = await this.roomsRepository.findOneBy({ id: Number(roomId) })
 
       if (!room) {
         throw new Error(`Room with id ${roomId} not found`)
-      }
-
-      const totalPrice = room.card_price * quantity
-
-      const user = await this.usersRepository.findOneBy({
-        id: userId
-      })
-
-      if (!user) {
-        throw new Error(`User with id ${userId} not found`)
-      }
-
-      if (user.credits < totalPrice) {
-        throw new Error(
-          `User does not have enough credits to buy ${quantity} cards`
-        )
       }
 
       const game = await this.gamesRepository.findOne({
@@ -164,21 +151,8 @@ export class RoomsController {
         }
       })
 
-      
-      let participation = await this.participationsRepository.findOne({
-        where: {
-          user: { id: userId },
-          game: { id: game?.id }
-        }
-      })
-      
-      if (!participation) {
-        participation = await this.participationsRepository.save({
-          user: { id: userId },
-          game: { id: game?.id }
-        })
-      }
-      
+      if (!game) throw new Error('Error getting room game')
+
       /* const soldCards:
       | { totalCards: number; lineCards: number; bingoCards: number }
       | undefined = await this.roomsRepository
@@ -203,6 +177,90 @@ export class RoomsController {
       console.log(soldCards) */
 
       await AppDataSource.transaction(async transactionManager => {
+        for (let i = 0; i < quantity; i++) {
+          const card = new Card()
+          card.card = this.bingoController.generateCard()
+          this.bingoController.checkVictory(card.card, game?.game_balls)
+
+          await transactionManager.save(card)
+        }
+      })
+
+      res.send(new ApiResponseDto(true, 'Succesfully generated cards!', null))
+    } catch (error) {
+      res.send(new ApiResponseDto(false, 'Error generating cards!', null))
+    }
+  }
+
+  public buyCards = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.body
+      const { roomId } = req.params
+      const { cardsIds } = req.body as { cardsIds: number[] }
+
+      if (
+        !(
+          Array.isArray(cardsIds) &&
+          cardsIds.every(element => typeof element === 'number')
+        )
+      )
+        return res
+          .status(400)
+          .send(new ApiResponseDto(false, 'Invalid cards argument.', null))
+
+      const room = await this.roomsRepository.findOneBy({ id: Number(roomId) })
+
+      if (!room) {
+        throw new Error(`Room with id ${roomId} not found`)
+      }
+
+      const quantity = cardsIds.length
+
+      const totalPrice = room.card_price * quantity
+
+      const user = await this.usersRepository.findOneBy({
+        id: userId
+      })
+
+      if (!user) {
+        throw new Error(`User with id ${userId} not found`)
+      }
+
+      if (user.credits < totalPrice) {
+        throw new Error(
+          `User does not have enough credits to buy ${quantity} cards`
+        )
+      }
+
+      const game = await this.gamesRepository.findOne({
+        where: {
+          room: { id: Number(roomId) },
+          played_date: IsNull()
+        }
+      })
+
+      const cards = await this.cardsRepository
+        .createQueryBuilder('card')
+        .where('card.id IN (:...ids)', { ids: cardsIds })
+        .getMany()
+
+      if (!cards) throw new Error('Error getting cards.')
+
+      let participation = await this.participationsRepository.findOne({
+        where: {
+          user: { id: userId },
+          game: { id: game?.id }
+        }
+      })
+
+      if (!participation) {
+        participation = await this.participationsRepository.save({
+          user: { id: userId },
+          game: { id: game?.id }
+        })
+      }
+
+      await AppDataSource.transaction(async transactionManager => {
         const transaction = new Transaction()
         transaction.amount = totalPrice * -1
         transaction.user = user
@@ -211,14 +269,10 @@ export class RoomsController {
         await transactionManager.save(transaction)
 
         for (let i = 0; i < quantity; i++) {
-          const card = new Card()
+          const card = cards[i]
           card.participation = participation as Participation
-          card.card = this.bingoController.generateCard()
           if (game?.game_balls)
-            this.bingoController.checkVictory(
-              card.card,
-              game?.game_balls
-            )
+            this.bingoController.checkVictory(card.card, game?.game_balls)
 
           await transactionManager.save(card)
         }

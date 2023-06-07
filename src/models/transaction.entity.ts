@@ -9,6 +9,9 @@ export class Transaction {
   @Column()
   amount: number
 
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  date: Date;
+
   @ManyToOne(() => User, user => user.transactions)
   user: User
 }

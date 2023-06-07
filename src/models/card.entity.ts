@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, Column, OneToMany } from 'typeorm'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  Column,
+  OneToMany
+} from 'typeorm'
 import { Participation } from './participation.entity'
 import { Victory } from './victory.entity'
 
@@ -12,7 +18,9 @@ export class Card {
   })
   card: number[][]
 
-  @ManyToOne(() => Participation, participation => participation.cards)
+  @ManyToOne(() => Participation, participation => participation.cards, {
+    nullable: true
+  })
   participation: Participation
 
   @OneToMany(() => Victory, victory => victory.card)

@@ -15,5 +15,8 @@ router.get('/:roomId/cards', (req, res) =>
 router.post('/:roomId/buy_cards', (req, res) =>
   roomsController.buyCards(req, res)
 )
+router.get('/:roomId/generate_cards', (req, res) =>
+  roomsController.generateCards(req, res)
+)
 
 export default router

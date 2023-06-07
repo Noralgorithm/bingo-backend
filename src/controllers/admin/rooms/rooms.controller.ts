@@ -9,13 +9,11 @@ import { Repository } from 'typeorm'
 import AppDataSource from '../../../database/connection'
 import isCronExpressionValid from '../../../utils/cron_expressions_checker.util'
 import { BingoController } from '../../shared/bingo/bingo.controller'
-import { Participation } from '../../../models/participation.entity'
 import { Game } from '../../../models/game.entity'
 
 export class RoomsController {
   private cronJobs: Array<{ id: number; cronJob: CronJob }>
   private roomsRepository: Repository<Room>
-  private participationRepository: Repository<Participation>
   private gamesRepository: Repository<Game>
   private bingoController: BingoController
 
@@ -23,7 +21,6 @@ export class RoomsController {
     try {
       this.gamesRepository = AppDataSource.getRepository(Game)
       this.roomsRepository = AppDataSource.getRepository(Room)
-      this.participationRepository = AppDataSource.getRepository(Participation)
       this.bingoController = new BingoController(5, 5)
 
       const rooms = await this.roomsRepository
@@ -300,12 +297,7 @@ export class RoomsController {
   }
 
   private executeRoom = async (room: Room) => {
-    await this.participationRepository
-      .createQueryBuilder('participations')
-      .update(Participation)
-      .set({ played: true })
-      .where('roomId = :id', { id: room.id })
-      .execute()
+
 
     this.generateGame(room.id)
     console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
