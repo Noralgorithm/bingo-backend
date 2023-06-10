@@ -40,7 +40,8 @@ export class AuthController {
 
       res.send(
         new ApiResponseDto(true, 'Login success!', {
-          token: generateToken({ userId: String(user.id), role: user.role })
+          token: generateToken({ userId: String(user.id), role: user.role }),
+          ...user
         })
       )
     } catch (e) {

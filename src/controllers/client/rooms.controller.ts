@@ -176,17 +176,19 @@ export class RoomsController {
         
       console.log(soldCards) */
 
+      const cards: Card[] = []
+
       await AppDataSource.transaction(async transactionManager => {
         for (let i = 0; i < quantity; i++) {
           const card = new Card()
           card.card = this.bingoController.generateCard()
+          cards[i] = card
           this.bingoController.checkVictory(card.card, game?.game_balls)
-
           await transactionManager.save(card)
         }
       })
 
-      res.send(new ApiResponseDto(true, 'Succesfully generated cards!', null))
+      res.send(new ApiResponseDto(true, 'Succesfully generated cards!', cards ))
     } catch (error) {
       res.send(new ApiResponseDto(false, 'Error generating cards!', null))
     }
