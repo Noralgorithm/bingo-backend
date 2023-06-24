@@ -9,6 +9,7 @@ router.use(authenticateToken)
 const roomsController = new RoomsController()
 
 router.get('/', (req, res) => roomsController.findAll(req, res))
+router.get('/:roomId', (req, res) => roomsController.findOne(req, res))
 router.get('/:roomId/cards', (req, res) =>
   roomsController.getUserCards(req, res)
 )

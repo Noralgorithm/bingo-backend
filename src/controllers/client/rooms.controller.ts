@@ -91,6 +91,48 @@ export class RoomsController {
     }
   }
 
+  public findOne = async (req: Request, res: Response) => {
+    try {
+      const roomId = req.params.roomId
+
+      const room = await this.roomsRepository
+        .createQueryBuilder('rooms')
+        .where('rooms.id = :id', { id: roomId })
+        .select([
+          'rooms.id',
+          'rooms.name',
+          'rooms.bingos_amount',
+          'rooms.lines_amount',
+          'rooms.bingo_prize',
+          'rooms.line_prize',
+          'rooms.is_premium',
+          'rooms.card_price',
+          'rooms.frequency'
+        ])
+        .getOne()
+
+      if (!room) {
+        return res.send(
+          new ApiResponseDto(false, 'Room not found!', null)
+        )
+      }
+
+      res.send(
+        new ApiResponseDto(true, 'Room fetched successfully!', {
+          room
+        })
+      )
+    } catch (e) {
+      res.send(
+        new ApiResponseDto(
+          false,
+          'Error while fetching room!',
+          getErrorMessage(e)
+        )
+      )
+    }
+  }
+
   public getUserCards = async (req: Request, res: Response) => {
     try {
       const { userId } = req.body
