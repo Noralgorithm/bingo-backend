@@ -30,7 +30,6 @@ export class RoomsController {
 
   public findAll = async (req: Request, res: Response) => {
     try {
-      console.log(req.body)
       const currentPage = parseInt(req.query.page as string) || 1
       const pageSize = parseInt(req.query.pageSize as string) || 10
       const search = req.query.search as string | undefined
@@ -112,11 +111,11 @@ export class RoomsController {
         relations: ['cards']
       })
 
-      const cards = participation?.cards
+      const cards = participation?.cards || []
       res.send({
         success: true,
         message: 'User cards fetched successfully!',
-        data: { cards }
+        data: cards
       })
     } catch (error) {
       console.log(error)
@@ -136,7 +135,7 @@ export class RoomsController {
       if (!quantity)
         return res
           .status(400)
-          .send(new ApiResponseDto(false, 'Bad request.', null))
+          .send(new ApiResponseDto(false, 'Bad request.', req.body))
 
       const room = await this.roomsRepository.findOneBy({ id: Number(roomId) })
 
