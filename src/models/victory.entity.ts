@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
 import { Card } from './card.entity'
 
-export type victory = 'no' | 'bingo' | 'line'
+export type victory = 'no' | 'bingo' | 'row' | 'column' | 'diagonal'
 
 @Entity()
 export class Victory {

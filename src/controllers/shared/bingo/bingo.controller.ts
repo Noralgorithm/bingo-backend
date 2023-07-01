@@ -1,3 +1,5 @@
+import { victory } from "../../../models/victory.entity"
+
 type BingoCard = number[][]
 
 export class BingoController {
@@ -48,8 +50,8 @@ export class BingoController {
   public checkVictory(
     card: BingoCard,
     numbers: number[]
-  ): { type: string; lastIndex: number }[] {
-    const victories: { type: string; lastIndex: number }[] = []
+  ): { type: victory; lastIndex: number }[] {
+    const victories: { type: victory; lastIndex: number }[] = []
     const maxIndices: Record<string, number> = {}
 
     for (let i = 0; i < this.rows; i++) {
@@ -58,7 +60,7 @@ export class BingoController {
         const index = row
           .map(num => numbers.indexOf(num))
           .reduce((a, b) => Math.max(a, b))
-        const type = 'Row ' + (i + 1)
+        const type = 'row'
         victories.push({ type, lastIndex: index })
         maxIndices[type] = Math.max(maxIndices[type] || 0, index)
       }
@@ -75,7 +77,7 @@ export class BingoController {
         const index = column
           .map(num => numbers.indexOf(num))
           .reduce((a, b) => Math.max(a, b))
-        const type = 'Column ' + (j + 1)
+        const type = 'column'
         victories.push({ type, lastIndex: index })
         maxIndices[type] = Math.max(maxIndices[type] || 0, index)
       }
@@ -89,7 +91,7 @@ export class BingoController {
       const index = diagonal1
         .map(num => numbers.indexOf(num))
         .reduce((a, b) => Math.max(a, b))
-      const type = 'Diagonal 1'
+      const type = 'diagonal'
       victories.push({ type, lastIndex: index })
       maxIndices[type] = Math.max(maxIndices[type] || 0, index)
     }
@@ -97,7 +99,7 @@ export class BingoController {
       const index = diagonal2
         .map(num => numbers.indexOf(num))
         .reduce((a, b) => Math.max(a, b))
-      const type = 'Diagonal 2'
+      const type = 'diagonal'
       victories.push({ type, lastIndex: index })
       maxIndices[type] = Math.max(maxIndices[type] || 0, index)
     }
@@ -107,13 +109,9 @@ export class BingoController {
       const index = flatCard
         .map(num => numbers.indexOf(num))
         .reduce((a, b) => Math.max(a, b))
-      const type = 'Bingo'
+      const type = 'bingo'
       victories.push({ type, lastIndex: index })
       maxIndices[type] = Math.max(maxIndices[type] || 0, index)
-    }
-
-    if (victories.length === 0) {
-      victories.push({ type: 'No win yet', lastIndex: -1 })
     }
 
     return victories.map(({ type }) => ({

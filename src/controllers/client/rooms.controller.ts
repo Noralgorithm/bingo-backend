@@ -11,6 +11,7 @@ import { User } from '../../models/user.entity'
 import { Card } from '../../models/card.entity'
 import { BingoController } from '../shared/bingo/bingo.controller'
 import { Game } from '../../models/game.entity'
+import { Victory } from '../../models/victory.entity'
 
 export class RoomsController {
   private roomsRepository: Repository<Room>
@@ -224,10 +225,18 @@ export class RoomsController {
           const card = new Card()
           card.card = this.bingoController.generateCard()
           cards[i] = card
-          this.bingoController.checkVictory(card.card, game?.game_balls)
-          await transactionManager.save(card)
+          const victories = this.bingoController.checkVictory(card.card, game?.game_balls)
+          if (victories.length) {
+            const victoryEntities = victories.map(victory => {
+              const newVictory = new Victory()
+              newVictory.card = card
+              newVictory.victoryTurn = victory.lastIndex
+              newVictory.victoryType = victory.type
+          })
+          await transactionManager.save(victoryEntities)
         }
-      })
+        await transactionManager.save(card)
+    }})
 
       res.send(new ApiResponseDto(true, 'Succesfully generated cards!', cards ))
     } catch (error) {

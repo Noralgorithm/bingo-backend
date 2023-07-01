@@ -265,12 +265,13 @@ export class RoomsController {
       const nextGameBalls = this.bingoController.generateBalls()
 
       if (room.games) {
-        const lastGame = room?.games[room.games?.length - 1]
-        if (lastGame) {
-          lastGame.played_date = new Date()
-          await this.gamesRepository.save(lastGame)
-        }
+        room.games
+          .filter(game => game.played_date === null)
+          .forEach(game => (game.played_date = new Date()))
+
+        this.gamesRepository.save(room.games)
       }
+
 
       const game = new Game()
       game.game_balls = nextGameBalls
@@ -297,8 +298,6 @@ export class RoomsController {
   }
 
   private executeRoom = async (room: Room) => {
-
-
     this.generateGame(room.id)
     console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
   }
