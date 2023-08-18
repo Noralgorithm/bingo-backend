@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import { ApiResponseDto } from '../../../utils/api_response_dto.util'
 import { getErrorMessage } from '../../../utils/get_error_message.util'
 import { Room } from '../../../models/room.entity'
-import { Brackets } from 'typeorm'
+import { Brackets, IsNull } from 'typeorm'
 import { Pagination } from '../../shared/types'
 import { CronJob } from 'cron'
 import { Repository } from 'typeorm'
@@ -10,15 +10,19 @@ import AppDataSource from '../../../database/connection'
 import isCronExpressionValid from '../../../utils/cron_expressions_checker.util'
 import { BingoController } from '../../shared/bingo/bingo.controller'
 import { Game } from '../../../models/game.entity'
+import { Victory } from '../../../models/victory.entity'
+import { User } from '../../../models/user.entity'
 
 export class RoomsController {
   private cronJobs: Array<{ id: number; cronJob: CronJob }>
   private roomsRepository: Repository<Room>
   private gamesRepository: Repository<Game>
+  private usersRepository: Repository<User>
   private bingoController: BingoController
 
   public init = async () => {
     try {
+      this.usersRepository = AppDataSource.getRepository(User)
       this.gamesRepository = AppDataSource.getRepository(Game)
       this.roomsRepository = AppDataSource.getRepository(Room)
       this.bingoController = new BingoController(5, 5)
@@ -272,7 +276,6 @@ export class RoomsController {
         this.gamesRepository.save(room.games)
       }
 
-
       const game = new Game()
       game.game_balls = nextGameBalls
       game.room = room
@@ -297,7 +300,81 @@ export class RoomsController {
     }
   }
 
+  public rewardPlayers = async (roomId: number) => {
+    try {
+      const game = await this.gamesRepository.findOne({
+        where: {
+          room: { id: Number(roomId) },
+          played_date: IsNull()
+        }
+      })
+
+      if (!game) {
+        throw new Error(`Game for room ${roomId} not found`)
+      }
+
+      const victories = await this.roomsRepository
+        .createQueryBuilder()
+        .select('victory.*, user.id as userId')
+        .from(Victory, 'victory')
+        .innerJoin('victory.card', 'card')
+        .innerJoin('card.participation', 'participation')
+        .innerJoin('participation.user', 'user')
+        .where('victory.victoryType IS NOT NULL')
+        .andWhere('participation.gameId = :gameId', { gameId: game.id })
+        .getRawMany()
+
+      const usersVictories: Record<number, Victory[]> = {}
+
+      victories.forEach(victory => {
+        const userId = victory.userId
+        if (!usersVictories[userId]) {
+          usersVictories[userId] = []
+        }
+        let victoryEntity = new Victory()
+        victoryEntity = victory
+        usersVictories[userId].push(victoryEntity)
+      })
+
+      await AppDataSource.transaction(async transactionManager => {
+        for (const userId of Object.keys(usersVictories)) {
+          const user = await this.usersRepository.findOne({
+            where: { id: Number(userId) }
+          })
+          if (!user) {
+            throw new Error(`User with id ${userId} not found`)
+          }
+          const userVictories = usersVictories[Number(userId)]
+          let totalPrize = 0
+          let hasBingo = false
+          let hasLine = false
+          userVictories.forEach((victory: Victory) => {
+            if (victory.victoryType === 'bingo' && !hasBingo) {
+              totalPrize += game.room.bingo_prize
+              hasBingo = true
+            } else if (
+              (victory.victoryType === 'row' ||
+                victory.victoryType === 'column' ||
+                victory.victoryType === 'diagonal') &&
+              !hasLine
+            ) {
+              totalPrize += game.room.line_prize
+              hasLine = true
+            }
+          })
+          user.credits += totalPrize
+          await transactionManager.save(user)
+        }
+      })
+
+      console.log('Players rewarded successfully')
+    } catch (e) {
+      console.log('Error while rewarding players', e)
+    }
+  }
+
   private executeRoom = async (room: Room) => {
+    this.rewardPlayers(room.id)
     this.generateGame(room.id)
     console.log(`Ejecutada sala ${room.name} de id: ${room.id}`)
   }

@@ -113,9 +113,7 @@ export class RoomsController {
         .getOne()
 
       if (!room) {
-        return res.send(
-          new ApiResponseDto(false, 'Room not found!', null)
-        )
+        return res.send(new ApiResponseDto(false, 'Room not found!', null))
       }
 
       res.send(
@@ -225,21 +223,27 @@ export class RoomsController {
           const card = new Card()
           card.card = this.bingoController.generateCard()
           cards[i] = card
-          const victories = this.bingoController.checkVictory(card.card, game?.game_balls)
+          const victories = this.bingoController.checkVictory(
+            card.card,
+            game?.game_balls
+          )
+          console.log(victories)
           if (victories.length) {
             const victoryEntities = victories.map(victory => {
               const newVictory = new Victory()
               newVictory.card = card
               newVictory.victoryTurn = victory.lastIndex
               newVictory.victoryType = victory.type
-          })
-          await transactionManager.save(victoryEntities)
+            })
+            await transactionManager.save(victoryEntities)
+          }
+          await transactionManager.save(card)
         }
-        await transactionManager.save(card)
-    }})
+      })
 
-      res.send(new ApiResponseDto(true, 'Succesfully generated cards!', cards ))
+      res.send(new ApiResponseDto(true, 'Succesfully generated cards!', cards))
     } catch (error) {
+      console.log(error)
       res.send(new ApiResponseDto(false, 'Error generating cards!', null))
     }
   }
