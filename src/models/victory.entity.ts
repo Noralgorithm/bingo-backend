@@ -18,6 +18,6 @@ export class Victory {
   @Column({ nullable: true })
   victoryTurn: number
 
-  @ManyToOne(() => Card, card => card.victories)
+  @ManyToOne(() => Card, (card: Card) => card.victories)
   card: Card
 }

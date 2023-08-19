@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import config from '../config'
+import { JWT_SECRET } from '../config'
 
 interface TokenData {
   userId: string
@@ -7,7 +7,7 @@ interface TokenData {
 }
 
 export const generateToken = ({ userId, role }: TokenData) => {
-  const token = jwt.sign({ userId, role }, config.jwtSecret, {
+  const token = jwt.sign({ userId, role }, JWT_SECRET, {
     expiresIn: '2h'
   })
   return token
@@ -15,7 +15,7 @@ export const generateToken = ({ userId, role }: TokenData) => {
 
 export const verifyToken = (token: string) => {
   try {
-    const decoded = jwt.verify(token, config.jwtSecret)
+    const decoded = jwt.verify(token, JWT_SECRET)
     return decoded as TokenData
   } catch (error) {
     return null

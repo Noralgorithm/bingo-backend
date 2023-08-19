@@ -7,27 +7,30 @@ import { Card } from '../models/card.entity'
 import { Transaction } from '../models/transaction.entity'
 import { Game } from '../models/game.entity'
 import { Victory } from '../models/victory.entity'
+import { DB_HOST, DB_USERNAME, DB_PASSWORD, DB_PORT, DB_NAME } from '../config'
 
 export const roomsController = new RoomsController()
 
 const AppDataSource = new DataSource({
   type: 'postgres',
-  host: 'localhost',
-  port: 5432,
-  username: 'postgres',
-  password: '852456753jose',
-  database: 'test',
+  host: DB_HOST,
+  port: Number(DB_PORT),
+  username: DB_USERNAME,
+  password: DB_PASSWORD,
+  database: DB_NAME,
   entities: [User, Room, Participation, Card, Transaction, Game, Victory],
   synchronize: true
 })
 
-AppDataSource.initialize()
-  .then(() => {
-    roomsController.init()
-    console.log('Conexión establecida con éxito!')
-  })
-  .catch(error => {
-    console.log('Error al establecer la conexión:', error)
-  })
+export async function connectToDatabase(roomsController: RoomsController) {
+  AppDataSource.initialize()
+    .then(() => {
+      roomsController.init()
+      console.log('Conexión establecida con éxito!')
+    })
+    .catch((error: unknown) => {
+      console.log('Error al establecer la conexión:', error)
+    })
+}
 
 export default AppDataSource
