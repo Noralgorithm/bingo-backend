@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import authenticateToken from '../../middlewares/jwt.middleware'
 import isAdmin from '../../middlewares/is_admin.middleware'
-import { roomsController } from '../../database/connection'
+import { roomsController } from '../../app'
 
 const router = Router()
 

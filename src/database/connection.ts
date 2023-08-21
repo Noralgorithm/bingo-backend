@@ -25,7 +25,7 @@ const AppDataSource = new DataSource({
 
 export async function connectToDatabase(roomsController: RoomsController) {
   AppDataSource.initialize()
-    .then(() => {
+    .then(async () => {
       roomsController.init()
       console.log('Conexión establecida con éxito!')
     })
