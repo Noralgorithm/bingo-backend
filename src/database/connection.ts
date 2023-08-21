@@ -18,6 +18,7 @@ const AppDataSource = new DataSource({
   username: DB_USERNAME,
   password: DB_PASSWORD,
   database: DB_NAME,
+  ssl: true,
   entities: [User, Room, Participation, Card, Transaction, Game, Victory],
   synchronize: true
 })
