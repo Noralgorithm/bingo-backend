@@ -11,7 +11,7 @@ import AppDataSource from '../database/connection'
 
 export type UserRoleType = 'client' | 'admin' | 'super'
 
-@Entity()
+@Entity({ name: 'users' })
 export class User {
   @PrimaryGeneratedColumn()
   id: number
@@ -38,7 +38,9 @@ export class User {
   @OneToMany(() => Participation, participation => participation.user)
   participations: Participation[]
 
-  @OneToMany(() => Transaction, transaction => transaction.user, { eager: true })
+  @OneToMany(() => Transaction, transaction => transaction.user, {
+    eager: true
+  })
   transactions: Transaction[]
 
   @Column({ default: 0 })
@@ -47,11 +49,12 @@ export class User {
   @AfterLoad()
   async computeTotalTransactions() {
     const transactionsRepository = AppDataSource.getRepository(Transaction)
-    const sum = await transactionsRepository.createQueryBuilder('transaction')
+    const sum = await transactionsRepository
+      .createQueryBuilder('transaction')
       .select('SUM(transaction.amount)', 'sum')
       .where('transaction.user = :userId', { userId: this.id })
-      .getRawOne();
+      .getRawOne()
 
-    this.credits = Number(sum.sum) || 0;
+    this.credits = Number(sum.sum) || 0
   }
 }

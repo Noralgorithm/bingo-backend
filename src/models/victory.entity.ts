@@ -3,7 +3,7 @@ import { Card } from './card.entity'
 
 export type victory = 'no' | 'bingo' | 'row' | 'column' | 'diagonal'
 
-@Entity()
+@Entity({ name: 'victories' })
 export class Victory {
   @PrimaryGeneratedColumn()
   id: number

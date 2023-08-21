@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm'
 import { User } from './user.entity'
 
-@Entity()
+@Entity({ name: 'transactions' })
 export class Transaction {
   @PrimaryGeneratedColumn()
   id: number
@@ -10,7 +10,7 @@ export class Transaction {
   amount: number
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  date: Date;
+  date: Date
 
   @ManyToOne(() => User, user => user.transactions)
   user: User
