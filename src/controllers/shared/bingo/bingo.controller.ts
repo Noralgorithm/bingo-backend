@@ -1,4 +1,4 @@
-import { victory } from "../../../models/victory.entity"
+import { victory } from '../../../models/victory.entity'
 
 type BingoCard = number[][]
 
@@ -61,7 +61,7 @@ export class BingoController {
           .map(num => numbers.indexOf(num))
           .reduce((a, b) => Math.max(a, b))
         const type = 'row'
-        victories.push({ type, lastIndex: index })
+        victories.push({ type, lastIndex: index + 1 })
         maxIndices[type] = Math.max(maxIndices[type] || 0, index)
       }
     }
@@ -78,7 +78,7 @@ export class BingoController {
           .map(num => numbers.indexOf(num))
           .reduce((a, b) => Math.max(a, b))
         const type = 'column'
-        victories.push({ type, lastIndex: index })
+        victories.push({ type, lastIndex: index + 1 })
         maxIndices[type] = Math.max(maxIndices[type] || 0, index)
       }
     }
@@ -92,7 +92,7 @@ export class BingoController {
         .map(num => numbers.indexOf(num))
         .reduce((a, b) => Math.max(a, b))
       const type = 'diagonal'
-      victories.push({ type, lastIndex: index })
+      victories.push({ type, lastIndex: index + 1 })
       maxIndices[type] = Math.max(maxIndices[type] || 0, index)
     }
     if (diagonal2.every(num => numbers.includes(num))) {
@@ -100,7 +100,7 @@ export class BingoController {
         .map(num => numbers.indexOf(num))
         .reduce((a, b) => Math.max(a, b))
       const type = 'diagonal'
-      victories.push({ type, lastIndex: index })
+      victories.push({ type, lastIndex: index + 1 })
       maxIndices[type] = Math.max(maxIndices[type] || 0, index)
     }
 
@@ -110,14 +110,11 @@ export class BingoController {
         .map(num => numbers.indexOf(num))
         .reduce((a, b) => Math.max(a, b))
       const type = 'bingo'
-      victories.push({ type, lastIndex: index })
+      victories.push({ type, lastIndex: index + 1 })
       maxIndices[type] = Math.max(maxIndices[type] || 0, index)
     }
 
-    return victories.map(({ type }) => ({
-      type,
-      lastIndex: maxIndices[type]
-    }))
+    return victories.sort((a, b) => a.lastIndex - b.lastIndex)
   }
 
   private shuffle(array: number[]): number[] {

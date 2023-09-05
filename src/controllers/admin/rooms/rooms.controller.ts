@@ -352,12 +352,7 @@ export class RoomsController {
             if (victory.victoryType === 'bingo' && !hasBingo) {
               totalPrize += game.room.bingo_prize
               hasBingo = true
-            } else if (
-              (victory.victoryType === 'row' ||
-                victory.victoryType === 'column' ||
-                victory.victoryType === 'diagonal') &&
-              !hasLine
-            ) {
+            } else if (victory.victoryType === 'line' && !hasLine) {
               totalPrize += game.room.line_prize
               hasLine = true
             }

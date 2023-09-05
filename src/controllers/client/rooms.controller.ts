@@ -193,30 +193,34 @@ export class RoomsController {
 
       if (!game) throw new Error('Error getting room game')
 
-      /* const soldCards:
-      | { totalCards: number; lineCards: number; bingoCards: number }
-      | undefined = await this.roomsRepository
-      .createQueryBuilder()
-      .select('COUNT(DISTINCT card.id)', 'totalCards')
-      .addSelect(
-        'COUNT(DISTINCT CASE WHEN card.victoryType = :line THEN card.id END)',
-        'lineCards'
+      const soldCards:
+        | { totalCards: number; lineVictories: number; bingoVictories: number }
+        | undefined = await this.roomsRepository
+        .createQueryBuilder()
+        .select('COUNT(DISTINCT cards.id)', 'totalCards')
+        .addSelect(
+          'COUNT(DISTINCT CASE WHEN victories.victoryType = :line THEN cards.id END)',
+          'lineVictories'
         )
         .addSelect(
-          'COUNT(DISTINCT CASE WHEN card.victoryType = :bingo THEN card.id END)',
-          'bingoCards'
+          'COUNT(DISTINCT CASE WHEN victories.victoryType = :bingo THEN cards.id END)',
+          'bingoVictories'
         )
         .from(Room, 'room')
-        .leftJoin('room.participations', 'participation')
-        .leftJoin('participation.cards', 'card')
+        .leftJoin('room.games', 'games')
+        .leftJoin('games.participations', 'participations')
+        .leftJoin('participations.cards', 'cards')
+        .leftJoin('cards.victories', 'victories')
         .where('room.id = :roomId', { roomId })
         .setParameter('line', 'line')
         .setParameter('bingo', 'bingo')
         .getRawOne()
-        
-      console.log(soldCards) */
+
+      console.log(soldCards)
 
       const cards: Card[] = []
+
+      let formattedVictories: Victory[] = []
 
       await AppDataSource.transaction(async transactionManager => {
         for (let i = 0; i < quantity; i++) {
@@ -227,21 +231,30 @@ export class RoomsController {
             card.card,
             game?.game_balls
           )
-          console.log(victories)
+
           if (victories.length) {
-            const victoryEntities = victories.map(victory => {
+            formattedVictories = victories.map(victory => {
               const newVictory = new Victory()
-              newVictory.card = card
               newVictory.victoryTurn = victory.lastIndex
-              newVictory.victoryType = victory.type
+              newVictory.victoryType =
+                victory.type !== 'bingo' && victory.type !== 'not'
+                  ? 'line'
+                  : victory.type
+              return newVictory
             })
-            await transactionManager.save(victoryEntities)
           }
+          card.victories = formattedVictories
           await transactionManager.save(card)
         }
       })
 
-      res.send(new ApiResponseDto(true, 'Succesfully generated cards!', cards))
+      res.send(
+        new ApiResponseDto(
+          true,
+          'Succesfully generated cards!',
+          cards.map(card => ({ id: card.id, card: card.card }))
+        )
+      )
     } catch (error) {
       console.log(error)
       res.send(new ApiResponseDto(false, 'Error generating cards!', null))

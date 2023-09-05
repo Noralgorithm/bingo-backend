@@ -1,7 +1,8 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
 import { Card } from './card.entity'
 
-export type victory = 'no' | 'bingo' | 'row' | 'column' | 'diagonal'
+export type victory = 'not' | 'bingo' | 'row' | 'column' | 'diagonal'
+export type DBvictory = 'not' | 'bingo' | 'line'
 
 @Entity({ name: 'victories' })
 export class Victory {
@@ -13,7 +14,7 @@ export class Victory {
     enum: ['not', 'bingo', 'line'],
     default: 'not'
   })
-  victoryType: victory
+  victoryType: DBvictory
 
   @Column({ nullable: true })
   victoryTurn: number
