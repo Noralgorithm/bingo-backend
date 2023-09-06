@@ -9,15 +9,15 @@ export class TransactionsController {
   private usersRepository = AppDataSource.getRepository(User)
   private transactionsRepository = AppDataSource.getRepository(Transaction)
 
-  private transactionService: TransactionService = new TransactionService(
+  private transactionService = new TransactionService(
     this.usersRepository,
     this.transactionsRepository
   )
 
   public createTransaction = async (req: Request, res: Response) => {
     try {
-      const { userId, amount } = req.body
-      await this.transactionService.createTransaction(userId, amount)
+      const { targetUserId, amount } = req.body
+      await this.transactionService.createTransaction(targetUserId, amount)
 
       return res.send(
         new ApiResponseDto(true, 'Succesfully created transaction!', null)
