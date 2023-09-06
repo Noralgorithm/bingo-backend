@@ -349,13 +349,15 @@ export class RoomsController {
 
       res.send(new ApiResponseDto(true, 'Cards sold successfully!', null))
     } catch (e) {
-      res.send(
-        new ApiResponseDto(
-          false,
-          'Error while selling cards!',
-          getErrorMessage(e)
+      res
+        .status(400)
+        .send(
+          new ApiResponseDto(
+            false,
+            'Error while selling cards!',
+            getErrorMessage(e)
+          )
         )
-      )
     }
   }
 }
