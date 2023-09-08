@@ -199,11 +199,11 @@ export class RoomsController {
         .createQueryBuilder()
         .select('COUNT(DISTINCT cards.id)', 'totalCards')
         .addSelect(
-          'COUNT(DISTINCT CASE WHEN victories.victoryType = :line THEN cards.id END)',
+          'COUNT(DISTINCT CASE WHEN victories.victoryType = :line THEN victories.id END)',
           'lineVictories'
         )
         .addSelect(
-          'COUNT(DISTINCT CASE WHEN victories.victoryType = :bingo THEN cards.id END)',
+          'COUNT(DISTINCT CASE WHEN victories.victoryType = :bingo THEN victories.id END)',
           'bingoVictories'
         )
         .from(Room, 'room')
@@ -211,7 +211,8 @@ export class RoomsController {
         .leftJoin('games.participations', 'participations')
         .leftJoin('participations.cards', 'cards')
         .leftJoin('cards.victories', 'victories')
-        .where('room.id = :roomId', { roomId })
+        .where('games.played_date IS NULL')
+        .andWhere('room.id = :roomId', { roomId })
         .setParameter('line', 'line')
         .setParameter('bingo', 'bingo')
         .getRawOne()
@@ -229,7 +230,7 @@ export class RoomsController {
           cards[i] = card
           const victories = this.bingoController.checkVictory(
             card.card,
-            game?.game_balls
+            game?.game_balls.slice(0,50)
           )
 
           if (victories.length) {
@@ -240,11 +241,13 @@ export class RoomsController {
                 victory.type !== 'bingo' && victory.type !== 'not'
                   ? 'line'
                   : victory.type
+              newVictory.card = card
               return newVictory
             })
           }
           card.victories = formattedVictories
           await transactionManager.save(card)
+          await transactionManager.save(formattedVictories)
         }
       })
 
