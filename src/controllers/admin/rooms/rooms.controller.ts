@@ -358,15 +358,11 @@ export class RoomsController {
           }
           const userVictories = usersVictories[Number(userId)]
           let totalPrize = 0
-          let hasBingo = false
-          let hasLine = false
           userVictories.forEach((victory: Victory) => {
-            if (victory.victoryType === 'bingo' && !hasBingo) {
+            if (victory.victoryType === 'bingo') {
               totalPrize += game.room.bingo_prize
-              hasBingo = true
-            } else if (victory.victoryType === 'line' && !hasLine) {
+            } else if (victory.victoryType === 'line') {
               totalPrize += game.room.line_prize
-              hasLine = true
             }
           })
           await this.transactionService.createTransaction(

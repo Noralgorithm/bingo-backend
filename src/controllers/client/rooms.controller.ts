@@ -185,6 +185,9 @@ export class RoomsController {
       }
 
       const game = await this.gamesRepository.findOne({
+        relations: {
+          room: true
+        },
         where: {
           room: { id: Number(roomId) },
           played_date: IsNull()
@@ -230,7 +233,7 @@ export class RoomsController {
           cards[i] = card
           const victories = this.bingoController.checkVictory(
             card.card,
-            game?.game_balls.slice(0,60)
+            game?.game_balls.slice(0, 50)
           )
 
           if (victories.length) {
