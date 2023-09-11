@@ -230,7 +230,7 @@ export class RoomsController {
           cards[i] = card
           const victories = this.bingoController.checkVictory(
             card.card,
-            game?.game_balls.slice(0,50)
+            game?.game_balls.slice(0,60)
           )
 
           if (victories.length) {

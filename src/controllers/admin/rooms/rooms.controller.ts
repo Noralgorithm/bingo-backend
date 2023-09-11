@@ -12,20 +12,29 @@ import { BingoController } from '../../shared/bingo/bingo.controller'
 import { Game } from '../../../models/game.entity'
 import { Victory } from '../../../models/victory.entity'
 import { User } from '../../../models/user.entity'
+import { TransactionService } from '../../../services/transactions.service'
+import { Transaction } from '../../../models/transaction.entity'
 
 export class RoomsController {
   private cronJobs: Array<{ id: number; cronJob: CronJob }>
   private roomsRepository: Repository<Room>
   private gamesRepository: Repository<Game>
   private usersRepository: Repository<User>
+  private transactionsRepository: Repository<Transaction>
   private bingoController: BingoController
+  private transactionService: TransactionService
 
   public init = async () => {
     try {
       this.usersRepository = AppDataSource.getRepository(User)
       this.gamesRepository = AppDataSource.getRepository(Game)
       this.roomsRepository = AppDataSource.getRepository(Room)
+      this.transactionsRepository = AppDataSource.getRepository(Transaction)
       this.bingoController = new BingoController(5, 5)
+      this.transactionService = new TransactionService(
+        this.usersRepository,
+        this.transactionsRepository
+      )
 
       const rooms = await this.roomsRepository
         .createQueryBuilder('rooms')
@@ -303,6 +312,9 @@ export class RoomsController {
   public rewardPlayers = async (roomId: number) => {
     try {
       const game = await this.gamesRepository.findOne({
+        relations: {
+          room: true
+        },
         where: {
           room: { id: Number(roomId) },
           played_date: IsNull()
@@ -327,7 +339,7 @@ export class RoomsController {
       const usersVictories: Record<number, Victory[]> = {}
 
       victories.forEach(victory => {
-        const userId = victory.userId
+        const userId = victory.userid
         if (!usersVictories[userId]) {
           usersVictories[userId] = []
         }
@@ -357,7 +369,10 @@ export class RoomsController {
               hasLine = true
             }
           })
-          user.credits += totalPrize
+          await this.transactionService.createTransaction(
+            Number(userId),
+            totalPrize
+          )
           await transactionManager.save(user)
         }
       })
