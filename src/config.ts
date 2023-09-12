@@ -9,3 +9,5 @@ export const DB_USERNAME = process.env.DB_USERNAME
 export const DB_PASSWORD = process.env.DB_PASSWORD
 export const DB_NAME = process.env.DB_NAME
 export const PORT = process.env.PORT
+export const CLIENT_ID = process.env.CLIENT_ID
+export const APP_SECRET = process.env.APP_SECRET
