@@ -42,25 +42,6 @@ export class PaypalService {
     return body
   }
 
-  public approveOrder = async (orderID: string) => {
-    const accessToken = await this.generateAccessToken()
-    console.log(orderID)
-    const url = `https://www.sandbox.paypal.com/checkoutnow?token=${orderID}`
-
-    const response = await fetch(url, {
-      method: 'post',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`
-      }
-    })
-
-    console.log(response)
-    const body = await response.json()
-
-    return body
-  }
-
   public capturePayment = async (orderID: string) => {
     const accessToken = await this.generateAccessToken()
     const url = `${this.BASE_URL}/v2/checkout/orders/${orderID}/capture`

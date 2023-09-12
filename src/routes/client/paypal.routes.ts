@@ -14,3 +14,5 @@ router.post('/create_order', (req, res) =>
 router.post('/capture_order', (req, res) =>
   paypalController.captureOrder(req, res)
 )
+
+export default router
