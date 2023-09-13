@@ -1,6 +1,8 @@
-import { CLIENT_ID, APP_SECRET } from '../../config'
+import { CLIENT_ID, APP_SECRET } from '../../../config'
+import { PAYPAL_BASE_URL } from '../../../config'
+import { OrderObjectParams, createOrderObject } from '../create-order-object'
 
-export type OrderCreationPayload = {
+export type CreatedOrderPayload = {
   id: string
   status: string
   links: unknown[]
@@ -11,22 +13,10 @@ export type TokenGenerationPayload = {
 }
 
 export class PaypalService {
-  private readonly BASE_URL = 'https://api-m.sandbox.paypal.com'
-
-  public createOrder = async () => {
+  public createOrder = async ({ value, userId }: OrderObjectParams) => {
     const accessToken = await this.generateAccessToken()
-    const url = `${this.BASE_URL}/v2/checkout/orders`
-    const payload = {
-      intent: 'CAPTURE',
-      purchase_units: [
-        {
-          amount: {
-            currency_code: 'USD',
-            value: '0.02'
-          }
-        }
-      ]
-    }
+    const url = `${PAYPAL_BASE_URL}/v2/checkout/orders`
+    const payload = createOrderObject({ value, userId })
 
     const response = await fetch(url, {
       headers: {
@@ -37,14 +27,14 @@ export class PaypalService {
       body: JSON.stringify(payload)
     })
 
-    const body = (await response.json()) as OrderCreationPayload
+    const body = (await response.json()) as CreatedOrderPayload
 
     return body
   }
 
   public capturePayment = async (orderID: string) => {
     const accessToken = await this.generateAccessToken()
-    const url = `${this.BASE_URL}/v2/checkout/orders/${orderID}/capture`
+    const url = `${PAYPAL_BASE_URL}/v2/checkout/orders/${orderID}/capture`
 
     const response = await fetch(url, {
       method: 'post',
@@ -62,7 +52,7 @@ export class PaypalService {
   private generateAccessToken = async () => {
     try {
       const auth = Buffer.from(CLIENT_ID + ':' + APP_SECRET).toString('base64')
-      const response = await fetch(`${this.BASE_URL}/v1/oauth2/token`, {
+      const response = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
         method: 'post',
         body: 'grant_type=client_credentials',
         headers: {

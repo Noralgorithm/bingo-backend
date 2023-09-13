@@ -1,13 +1,21 @@
 import { Request, Response } from 'express'
-import { PaypalService } from '../../../services/paypal'
 import { ApiResponseDto } from '../../../utils/api_response_dto.util'
+import { PaypalPaymentService } from '../../../services/paypal/paypal-payment'
 
 export class PaypalController {
-  private paypalService: PaypalService
+  constructor(private paypalPaymentService: PaypalPaymentService) {}
 
-  public createOrder = async (_req: Request, res: Response) => {
+  public createOrder = async (req: Request, res: Response) => {
     try {
-      const response = await this.paypalService.createOrder()
+      if (!req.body?.value) throw new Error('Bad request.')
+
+      const { userId } = req.body as { userId: string }
+      const { value } = req.body
+
+      const response = await this.paypalPaymentService.createOrder({
+        value,
+        userId: Number(userId)
+      })
       return res
         .status(200)
         .json(new ApiResponseDto(true, 'Succesfully created order', response))
@@ -20,8 +28,12 @@ export class PaypalController {
 
   public captureOrder = async (req: Request, res: Response) => {
     try {
-      const { orderID } = req.body as { orderID: string }
-      const response = await this.paypalService.capturePayment(orderID)
+      const { token } = req.query
+      const { userId } = req.params
+      const response = await this.paypalPaymentService.captureOrder(
+        token as string,
+        Number(userId)
+      )
       return res
         .status(200)
         .json(new ApiResponseDto(true, 'Succesfully captured order', response))

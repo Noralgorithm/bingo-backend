@@ -11,3 +11,5 @@ export const DB_NAME = process.env.DB_NAME
 export const PORT = process.env.PORT
 export const CLIENT_ID = process.env.CLIENT_ID
 export const APP_SECRET = process.env.APP_SECRET
+export const PAYPAL_BASE_URL = 'https://api-m.sandbox.paypal.com'
+export const HOST = process.env.HOST
