@@ -1,4 +1,4 @@
-import { HOST } from '../../config'
+import { FRONTEND_URL, HOST } from '../../config'
 
 export type OrderObjectParams = {
   value: string
@@ -24,7 +24,7 @@ export function createOrderObject({ value, userId }: OrderObjectParams) {
           landing_page: 'NO_PREFERENCE',
           user_action: 'PAY_NOW',
           return_url: `${HOST}/client/paypal/capture_order/${userId}`,
-          cancel_url: 'https://example.com/cancelUrl'
+          cancel_url: `${FRONTEND_URL}/markeplace`
         }
       }
     }

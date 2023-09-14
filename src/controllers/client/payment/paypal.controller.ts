@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { ApiResponseDto } from '../../../utils/api_response_dto.util'
 import { PaypalPaymentService } from '../../../services/paypal/paypal-payment'
+import { FRONTEND_URL } from '../../../config'
 
 export class PaypalController {
   constructor(private paypalPaymentService: PaypalPaymentService) {}
@@ -30,13 +31,11 @@ export class PaypalController {
     try {
       const { token } = req.query
       const { userId } = req.params
-      const response = await this.paypalPaymentService.captureOrder(
+      await this.paypalPaymentService.captureOrder(
         token as string,
         Number(userId)
       )
-      return res
-        .status(200)
-        .json(new ApiResponseDto(true, 'Succesfully captured order', response))
+      return res.redirect(FRONTEND_URL ?? '/')
     } catch (error) {
       return res
         .status(400)
