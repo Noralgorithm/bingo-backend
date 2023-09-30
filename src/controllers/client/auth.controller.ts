@@ -24,7 +24,9 @@ export class AuthController {
           .status(400)
           .send(new ApiResponseDto(false, 'Bad request', null))
 
-      const user = await this.repository.findOneBy({ email })
+      const user = await this.repository.findOneBy({
+        email: email.toLowerCase()
+      })
 
       if (!user)
         return res
@@ -65,7 +67,7 @@ export class AuthController {
       const user = this.repository.create({
         name,
         nickname,
-        email,
+        email: email.toLowerCase(),
         password: hashedPassword,
         role: 'client'
       })
