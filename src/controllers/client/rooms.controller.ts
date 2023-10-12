@@ -12,6 +12,7 @@ import { Card } from '../../models/card.entity'
 import { BingoController } from '../shared/bingo/bingo.controller'
 import { Game } from '../../models/game.entity'
 import { Victory } from '../../models/victory.entity'
+import { TransactionService } from '../../services/transactions.service'
 
 export class RoomsController {
   private roomsRepository: Repository<Room>
@@ -20,6 +21,8 @@ export class RoomsController {
   private gamesRepository: Repository<Game>
   private cardsRepository: Repository<Card>
   private bingoController: BingoController
+  private transactionService: TransactionService
+
   constructor() {
     this.cardsRepository = AppDataSource.getRepository(Card)
     this.gamesRepository = AppDataSource.getRepository(Game)
@@ -27,6 +30,10 @@ export class RoomsController {
     this.participationsRepository = AppDataSource.getRepository(Participation)
     this.usersRepository = AppDataSource.getRepository(User)
     this.bingoController = new BingoController(5, 5)
+    this.transactionService = new TransactionService(
+      this.usersRepository,
+      AppDataSource.getRepository(Transaction)
+    )
   }
 
   public findAll = async (req: Request, res: Response) => {
@@ -336,12 +343,10 @@ export class RoomsController {
       }
 
       await AppDataSource.transaction(async transactionManager => {
-        const transaction = new Transaction()
-        transaction.amount = totalPrice * -1
-        transaction.user = user
-
-        await transactionManager.save(user)
-        await transactionManager.save(transaction)
+        await this.transactionService.createTransaction(
+          user.id,
+          totalPrice * -1
+        )
 
         for (let i = 0; i < quantity; i++) {
           const card = cards[i]
