@@ -276,6 +276,7 @@ export class RoomsController {
 
   public buyCards = async (req: Request, res: Response) => {
     try {
+      console.log("XD")
       const { userId } = req.body
       const { roomId } = req.params
       const { cardsIds } = req.body as { cardsIds: number[] }

@@ -15,4 +15,8 @@ router.get('/my_info', (req, res) => {
   userController.getUserInfo(req, res)
 })
 
+router.get('/my-participations', (req, res) => {
+  userController.getUserParticipations(req, res)
+})
+
 export default router

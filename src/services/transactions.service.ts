@@ -20,7 +20,7 @@ export class TransactionService {
     const transaction = new Transaction()
     transaction.amount = amount
     transaction.user = user
-
+    console.log('Transaction created')
     return this.transactionsRepository.save(transaction)
   }
 }
